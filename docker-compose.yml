@@ -1,0 +1,47 @@
+# ─── Queue Seva - Docker Compose ───────────────────────
+
+version: "3.8"
+
+services:
+  # Next.js Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: queue-seva-app
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=file:./prod.db
+      - JWT_SECRET=${JWT_SECRET:-queue-seva-production-secret-key}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-queue-seva-nextauth-secret}
+      - NODE_ENV=production
+    volumes:
+      - app-data:/app/data
+    restart: unless-stopped
+    depends_on:
+      - socket-service
+    networks:
+      - queue-seva-network
+
+  # Socket.io Real-time Service
+  socket-service:
+    build:
+      context: ./mini-services/socket-service
+      dockerfile: SocketDockerfile
+    container_name: queue-seva-socket
+    ports:
+      - "3003:3003"
+    environment:
+      - JWT_SECRET=${JWT_SECRET:-queue-seva-production-secret-key}
+      - PORT=3003
+    restart: unless-stopped
+    networks:
+      - queue-seva-network
+
+volumes:
+  app-data:
+
+networks:
+  queue-seva-network:
+    driver: bridge

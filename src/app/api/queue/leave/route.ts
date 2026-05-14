@@ -1,0 +1,93 @@
+import { NextRequest } from 'next/server'
+import { db } from '@/lib/db'
+import { successResponse, errorResponse } from '@/lib/api-response'
+import { recalculatePositions, updateQueueLength } from '@/lib/queue-utils'
+
+// POST - Leave a queue
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { queueId, userId } = body
+
+    // Validate required fields
+    if (!queueId || !userId) {
+      return errorResponse('Queue ID and User ID are required', 400)
+    }
+
+    // Check queue exists
+    const queue = await db.queue.findUnique({ where: { id: queueId } })
+    if (!queue) {
+      return errorResponse('Queue not found', 404)
+    }
+
+    // Find active membership
+    const member = await db.queueMember.findFirst({
+      where: {
+        queueId,
+        userId,
+        status: { in: ['WAITING', 'SERVING'] },
+      },
+    })
+
+    if (!member) {
+      return errorResponse('You are not in this queue', 404)
+    }
+
+    // Find active token
+    const token = await db.token.findFirst({
+      where: {
+        queueId,
+        userId,
+        status: { in: ['WAITING', 'CALLED', 'SERVING'] },
+      },
+    })
+
+    // Use transaction for atomic operations
+    await db.$transaction(async (tx) => {
+      // Update member status
+      await tx.queueMember.update({
+        where: { id: member.id },
+        data: {
+          status: 'CANCELLED',
+          leftAt: new Date(),
+        },
+      })
+
+      // Update token status if exists
+      if (token) {
+        await tx.token.update({
+          where: { id: token.id },
+          data: { status: 'CANCELLED' },
+        })
+      }
+
+      // Update queue length
+      await tx.queue.update({
+        where: { id: queueId },
+        data: { currentLength: Math.max(0, queue.currentLength - 1) },
+      })
+    })
+
+    // Recalculate positions for remaining members
+    await recalculatePositions(queueId)
+
+    // Create notification
+    await db.notification.create({
+      data: {
+        userId,
+        title: 'Left Queue',
+        message: `You have left "${queue.name}". ${token ? `Token ${token.tokenNumber} has been cancelled.` : ''}`,
+        type: 'QUEUE_UPDATE',
+        data: JSON.stringify({
+          queueId,
+          tokenNumber: token?.tokenNumber,
+        }),
+      },
+    })
+
+    return successResponse(null, 'Successfully left the queue')
+  } catch (error) {
+    console.error('Leave queue error:', error)
+    return errorResponse('Internal server error', 500)
+  }
+}

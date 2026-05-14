@@ -1,0 +1,242 @@
+// Queue Seva - Smart Queue Management System
+// Production-grade Prisma Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─── ENUMS ────────────────────────────────────────────
+
+// Using string constants instead of enums for SQLite compatibility
+
+// ─── USER & AUTH ──────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  password      String
+  phone         String?
+  avatar        String?
+  role          String    @default("USER") // USER, ADMIN, SUPER_ADMIN
+  isActive      Boolean   @default(true)
+  lastLoginAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  sessions      Session[]
+  tokens        Token[]
+  queueMembers  QueueMember[]
+  notifications Notification[]
+  adminLogs     AdminLog[]  @relation("AdminUser")
+  ownedQueues   Queue[]     @relation("QueueOwner")
+  serviceCenters ServiceCenter[] @relation("ServiceCenterOwner")
+
+  @@index([email])
+  @@index([role])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  token        String   @unique
+  refreshToken String   @unique
+  deviceInfo   String?
+  ipAddress    String?
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@index([refreshToken])
+}
+
+// ─── SERVICE CENTER ───────────────────────────────────
+
+model ServiceCenter {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  address     String?
+  phone       String?
+  email       String?
+  logo        String?
+  isActive    Boolean  @default(true)
+  ownerId     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner   User    @relation("ServiceCenterOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  queues  Queue[]
+  counters ServiceCounter[]
+
+  @@index([ownerId])
+  @@index([isActive])
+}
+
+model ServiceCounter {
+  id             String   @id @default(cuid())
+  name           String
+  label          String?
+  serviceCenterId String
+  isActive       Boolean  @default(true)
+  currentTokenId String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  serviceCenter ServiceCenter @relation(fields: [serviceCenterId], references: [id], onDelete: Cascade)
+  tokens        Token[]
+
+  @@index([serviceCenterId])
+  @@index([isActive])
+}
+
+// ─── QUEUE MANAGEMENT ─────────────────────────────────
+
+model Queue {
+  id              String   @id @default(cuid())
+  name            String
+  description     String?
+  prefix          String   @default("A") // Token prefix (A-001, B-001, etc.)
+  status          String   @default("ACTIVE") // ACTIVE, PAUSED, CLOSED
+  maxCapacity     Int      @default(100)
+  currentLength   Int      @default(0)
+  avgServiceTime  Int      @default(300) // Average service time in seconds
+  serviceCenterId String
+  ownerId         String
+  qrCode          String?  // QR code data URL
+  scheduledOpen   DateTime?
+  scheduledClose  DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  owner          User           @relation("QueueOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  serviceCenter  ServiceCenter  @relation(fields: [serviceCenterId], references: [id], onDelete: Cascade)
+  queueMembers   QueueMember[]
+  tokens         Token[]
+  analytics      QueueAnalytics[]
+
+  @@index([serviceCenterId])
+  @@index([status])
+  @@index([ownerId])
+}
+
+model QueueMember {
+  id        String   @id @default(cuid())
+  queueId   String
+  userId    String
+  position  Int
+  status    String   @default("WAITING") // WAITING, SERVING, COMPLETED, CANCELLED, NO_SHOW
+  joinedAt  DateTime @default(now())
+  servedAt  DateTime?
+  leftAt    DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  queue Queue @relation(fields: [queueId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([queueId, userId, status]) // Prevent duplicate active entries
+  @@index([queueId, status])
+  @@index([userId])
+  @@index([queueId, position])
+}
+
+// ─── TOKEN SYSTEM ─────────────────────────────────────
+
+model Token {
+  id           String   @id @default(cuid())
+  tokenNumber  String   // Display token like "A-001"
+  sequenceNum  Int      // Numeric sequence for sorting
+  status       String   @default("WAITING") // WAITING, CALLED, SERVING, COMPLETED, EXPIRED, CANCELLED
+  queueId      String
+  userId       String
+  serviceCounterId String?
+  calledAt     DateTime?
+  servedAt     DateTime?
+  completedAt  DateTime?
+  expiresAt    DateTime?
+  estimatedWait Int?    // Estimated wait in seconds at join time
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  queue          Queue          @relation(fields: [queueId], references: [id], onDelete: Cascade)
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  serviceCounter ServiceCounter? @relation(fields: [serviceCounterId], references: [id])
+
+  @@unique([queueId, sequenceNum])
+  @@index([queueId, status])
+  @@index([userId])
+  @@index([tokenNumber])
+  @@index([status])
+}
+
+// ─── NOTIFICATIONS ────────────────────────────────────
+
+model Notification {
+  id         String   @id @default(cuid())
+  userId     String
+  title      String
+  message    String
+  type       String   @default("INFO") // INFO, WARNING, SUCCESS, ERROR, TOKEN_CALLED, QUEUE_UPDATE
+  isRead     Boolean  @default(false)
+  data       String?  // JSON string for additional data
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+}
+
+// ─── ANALYTICS ────────────────────────────────────────
+
+model QueueAnalytics {
+  id              String   @id @default(cuid())
+  queueId         String
+  date            DateTime
+  totalJoined     Int      @default(0)
+  totalServed     Int      @default(0)
+  totalCancelled  Int      @default(0)
+  totalNoShow     Int      @default(0)
+  avgWaitTime     Int      @default(0) // Average wait time in seconds
+  avgServiceTime  Int      @default(0) // Average service time in seconds
+  peakHour        Int?     // Hour of day with most traffic (0-23)
+  maxQueueLength  Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  queue Queue @relation(fields: [queueId], references: [id], onDelete: Cascade)
+
+  @@unique([queueId, date])
+  @@index([queueId])
+  @@index([date])
+}
+
+// ─── ADMIN LOG ────────────────────────────────────────
+
+model AdminLog {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String
+  entity    String   // What entity was affected
+  entityId  String?  // ID of affected entity
+  details   String?  // JSON string with details
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  user User @relation("AdminUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+}

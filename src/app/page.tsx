@@ -1,0 +1,141 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
+import { useAppStore, type AppView } from '@/lib/store'
+import { apiClient } from '@/lib/api-client'
+
+// Import all screen components
+import { SplashScreen } from '@/components/queue-seva/splash-screen'
+import { WelcomeScreen } from '@/components/queue-seva/welcome-screen'
+import { LoginScreen, RegisterScreen } from '@/components/queue-seva/auth-screens'
+import { Sidebar } from '@/components/queue-seva/sidebar'
+import { UserDashboard } from '@/components/queue-seva/user-dashboard'
+import { QueueDetailScreen } from '@/components/queue-seva/queue-detail'
+import { TokenDisplayScreen } from '@/components/queue-seva/token-display'
+import { LiveTrackerScreen } from '@/components/queue-seva/live-tracker'
+import { QRScannerScreen } from '@/components/queue-seva/qr-scanner'
+import { NotificationsScreen } from '@/components/queue-seva/notifications'
+import { ProfileScreen } from '@/components/queue-seva/profile-screen'
+import { SettingsScreen } from '@/components/queue-seva/settings-screen'
+import { AdminDashboard } from '@/components/queue-seva/admin-dashboard'
+import { AdminAnalyticsScreen } from '@/components/queue-seva/admin-analytics'
+import { AdminQueuesScreen } from '@/components/queue-seva/admin-queues'
+import { QueuesListScreen } from '@/components/queue-seva/queues-list'
+
+// View router mapping
+function ViewRouter({ view }: { view: AppView }) {
+  switch (view) {
+    case 'splash':
+      return <SplashScreen />
+    case 'welcome':
+      return <WelcomeScreen />
+    case 'login':
+      return <LoginScreen />
+    case 'register':
+      return <RegisterScreen />
+    case 'dashboard':
+      return <LayoutWithSidebar><UserDashboard /></LayoutWithSidebar>
+    case 'queues':
+      return <LayoutWithSidebar><QueuesListScreen /></LayoutWithSidebar>
+    case 'queue-detail':
+      return <LayoutWithSidebar><QueueDetailScreen /></LayoutWithSidebar>
+    case 'qr-scanner':
+      return <LayoutWithSidebar><QRScannerScreen /></LayoutWithSidebar>
+    case 'token-display':
+      return <LayoutWithSidebar><TokenDisplayScreen /></LayoutWithSidebar>
+    case 'live-tracker':
+      return <LayoutWithSidebar><LiveTrackerScreen /></LayoutWithSidebar>
+    case 'notifications':
+      return <LayoutWithSidebar><NotificationsScreen /></LayoutWithSidebar>
+    case 'profile':
+      return <LayoutWithSidebar><ProfileScreen /></LayoutWithSidebar>
+    case 'settings':
+      return <LayoutWithSidebar><SettingsScreen /></LayoutWithSidebar>
+    case 'admin-dashboard':
+      return <LayoutWithSidebar><AdminDashboard /></LayoutWithSidebar>
+    case 'admin-analytics':
+      return <LayoutWithSidebar><AdminAnalyticsScreen /></LayoutWithSidebar>
+    case 'admin-queues':
+      return <LayoutWithSidebar><AdminQueuesScreen /></LayoutWithSidebar>
+    default:
+      return <LayoutWithSidebar><UserDashboard /></LayoutWithSidebar>
+  }
+}
+
+// Layout wrapper with sidebar for authenticated views
+function LayoutWithSidebar({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex h-screen bg-[#0F172A]">
+      <Sidebar />
+      <div className="flex flex-1 flex-col overflow-hidden">
+        {children}
+      </div>
+    </div>
+  )
+}
+
+export default function Home() {
+  const { currentView, isAuthenticated, setAuth, navigate } = useAppStore()
+  const [initialized, setInitialized] = useState(false)
+
+  // Splash screen then auto-navigate
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      // Check for stored auth
+      const storedAuth = localStorage.getItem('queueSevaAuth')
+      if (storedAuth) {
+        try {
+          const parsed = JSON.parse(storedAuth)
+          apiClient.setAccessToken(parsed.accessToken)
+          setAuth(parsed.user, parsed.accessToken, parsed.refreshToken)
+          navigate(parsed.user.role === 'ADMIN' ? 'admin-dashboard' : 'dashboard')
+        } catch {
+          navigate('welcome')
+        }
+      } else {
+        navigate('welcome')
+      }
+      setInitialized(true)
+    }, 2500)
+
+    return () => clearTimeout(timer)
+  }, [])
+
+  // Persist auth state
+  useEffect(() => {
+    if (initialized && isAuthenticated) {
+      const state = useAppStore.getState()
+      localStorage.setItem(
+        'queueSevaAuth',
+        JSON.stringify({
+          user: state.user,
+          accessToken: state.accessToken,
+          refreshToken: state.refreshToken,
+        })
+      )
+    }
+  }, [isAuthenticated, initialized])
+
+  // Clear storage on logout
+  useEffect(() => {
+    if (initialized && !isAuthenticated) {
+      localStorage.removeItem('queueSevaAuth')
+    }
+  }, [isAuthenticated, initialized])
+
+  return (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={currentView}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        className="h-screen overflow-hidden"
+      >
+        <ViewRouter view={currentView} />
+      </motion.div>
+    </AnimatePresence>
+  )
+}
