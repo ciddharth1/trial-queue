@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
 export function QRScannerScreen() {
-  const { navigate, user, setSelectedQueue } = useAppStore()
+  const { navigate, user, setSelectedQueue, setSelectedToken, setUserTokens, userTokens } = useAppStore()
   const [scanning, setScanning] = useState(false)
   const [manualCode, setManualCode] = useState('')
   const [scannedResult, setScannedResult] = useState<{ queueId: string; queueName: string } | null>(null)
@@ -56,6 +56,10 @@ export function QRScannerScreen() {
     try {
       const result = await apiClient.joinQueue(scannedResult.queueId)
       if (result.success && result.data) {
+        const token = result.data as any
+        token.queueName = scannedResult.queueName
+        setSelectedToken(token)
+        setUserTokens([...userTokens, token])
         navigate('token-display')
       } else {
         setError(result.error || 'Failed to join queue')

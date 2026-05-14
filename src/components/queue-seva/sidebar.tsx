@@ -116,7 +116,7 @@ export function Sidebar() {
                 >
                   <item.icon
                     className={cn(
-                      'h-4.5 w-4.5 transition-colors',
+                      'h-5 w-5 transition-colors',
                       isActive ? 'text-[#4F46E5]' : 'text-slate-500 group-hover:text-slate-300'
                     )}
                   />

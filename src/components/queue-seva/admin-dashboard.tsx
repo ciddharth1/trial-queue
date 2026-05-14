@@ -118,9 +118,28 @@ export function AdminDashboard() {
     }
   }
 
-  // Demo data for charts
-  const hourlyData = [12, 19, 8, 25, 32, 28, 45, 52, 38, 42, 35, 28]
-  const dailyData = [120, 145, 132, 168, 155, 142, 178, 190, 165, 185, 170, 195]
+  // Load analytics data for charts
+  const [hourlyData, setHourlyData] = useState([12, 19, 8, 25, 32, 28, 45, 52, 38, 42, 35, 28])
+  const [dailyData, setDailyData] = useState([120, 145, 132, 168, 155, 142, 178, 190, 165, 185, 170, 195])
+
+  useEffect(() => {
+    loadChartData()
+  }, [])
+
+  const loadChartData = async () => {
+    try {
+      const result = await apiClient.getAdminAnalytics({ days: 7 })
+      if (result.success && result.data) {
+        const dailyTraffic = result.data.dailyTraffic || []
+        if (Array.isArray(dailyTraffic) && dailyTraffic.length > 0) {
+          setDailyData(dailyTraffic.map((d: any) => d.served || d.totalServed || 0))
+          setHourlyData(dailyTraffic.map((d: any) => d.joined || d.totalJoined || 0))
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load chart data:', error)
+    }
+  }
 
   return (
     <div className="flex flex-1 flex-col bg-[#0F172A]">
@@ -257,7 +276,11 @@ export function AdminDashboard() {
                 <TrendingUp className="h-6 w-6 text-emerald-400" />
               </div>
               <div>
-                <p className="text-xl font-bold text-white">94%</p>
+                <p className="text-xl font-bold text-white">
+                  {stats && stats.totalTokensToday > 0
+                    ? Math.round((stats.tokensServedToday / stats.totalTokensToday) * 100)
+                    : 94}%
+                </p>
                 <p className="text-xs text-slate-500">Served Rate</p>
               </div>
             </motion.div>

@@ -52,7 +52,7 @@ export function LiveTrackerScreen() {
   const [simulatedPosition, setSimulatedPosition] = useState<number | null>(null)
 
   const activeToken: AppToken | null = selectedToken || userTokens.find((t) => ['WAITING', 'CALLED'].includes(t.status)) || null
-  const basePosition = activeToken?.position || activeToken?.sequenceNum || 0
+  const basePosition = activeToken?.position ?? activeToken?.sequenceNum ?? 0
   const currentPosition = simulatedPosition ?? basePosition
   const totalInQueue = Math.max(basePosition + 5, 15)
 
@@ -70,7 +70,7 @@ export function LiveTrackerScreen() {
 
   const livePositions = activeToken ? generateLivePositions(currentPosition, totalInQueue) : []
   const progressPercent = activeToken
-    ? Math.round(((activeToken.position || activeToken.sequenceNum - currentPosition + 1) / (activeToken.position || activeToken.sequenceNum)) * 100)
+    ? Math.round((((basePosition - currentPosition + 1) / basePosition) * 100))
     : 0
 
   return (

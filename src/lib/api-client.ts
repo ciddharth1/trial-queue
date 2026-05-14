@@ -31,11 +31,49 @@ class ApiClient {
         headers,
       })
 
+      // Handle non-JSON responses
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        if (!response.ok) {
+          return { success: false, error: `Request failed with status ${response.status}` }
+        }
+        return { success: true }
+      }
+
       const data = await response.json()
+
+      // Handle HTTP errors
+      if (!response.ok) {
+        if (response.status === 401) {
+          // Token expired - try refresh
+          const store = (await import('@/lib/store')).useAppStore.getState()
+          if (store.refreshToken) {
+            try {
+              const refreshResult = await this.refreshToken(store.refreshToken)
+              if (refreshResult.success && refreshResult.data) {
+                this.setAccessToken(refreshResult.data.accessToken)
+                store.setAuth(store.user!, refreshResult.data.accessToken, store.refreshToken!)
+                // Retry the original request
+                headers['Authorization'] = `Bearer ${refreshResult.data.accessToken}`
+                const retryResponse = await fetch(`${BASE_URL}${endpoint}`, { ...options, headers })
+                if (retryResponse.ok) {
+                  return retryResponse.json()
+                }
+              }
+            } catch {
+              // Refresh failed, logout
+              store.logout()
+            }
+          }
+          return { success: false, error: 'Session expired. Please login again.' }
+        }
+        return { success: false, error: data.error || data.message || `Request failed (${response.status})` }
+      }
+
       return data
     } catch (error) {
       console.error('API request failed:', error)
-      return { success: false, error: 'Network error. Please try again.' }
+      return { success: false, error: 'Network error. Please check your connection and try again.' }
     }
   }
 

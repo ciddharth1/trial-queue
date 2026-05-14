@@ -18,7 +18,7 @@ export function QueuesListScreen() {
 
   useEffect(() => {
     loadQueues()
-  }, [])
+  }, [statusFilter])
 
   const loadQueues = async () => {
     setLoading(true)

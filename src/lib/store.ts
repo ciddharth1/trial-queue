@@ -1,6 +1,7 @@
 'use client'
 
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 
 // ─── VIEW TYPES ──────────────────────────────────────────
 export type AppView =
@@ -86,7 +87,7 @@ interface AppState {
   navigate: (view: AppView) => void
   goBack: () => void
 
-  // Auth
+  // Auth (persisted)
   user: AppUser | null
   accessToken: string | null
   refreshToken: string | null
@@ -136,90 +137,105 @@ interface AppState {
   setSidebarOpen: (open: boolean) => void
 }
 
-export const useAppStore = create<AppState>((set, get) => ({
-  // Navigation
-  currentView: 'splash',
-  previousView: null,
-  navigate: (view) =>
-    set((state) => ({
-      previousView: state.currentView,
-      currentView: view,
-    })),
-  goBack: () =>
-    set((state) => ({
-      currentView: state.previousView || 'dashboard',
+export const useAppStore = create<AppState>()(
+  persist(
+    (set, get) => ({
+      // Navigation
+      currentView: 'splash',
       previousView: null,
-    })),
+      navigate: (view) =>
+        set((state) => ({
+          previousView: state.currentView,
+          currentView: view,
+        })),
+      goBack: () =>
+        set((state) => ({
+          currentView: state.previousView || 'dashboard',
+          previousView: null,
+        })),
 
-  // Auth
-  user: null,
-  accessToken: null,
-  refreshToken: null,
-  isAuthenticated: false,
-  setAuth: (user, accessToken, refreshToken) =>
-    set({
-      user,
-      accessToken,
-      refreshToken,
-      isAuthenticated: true,
-    }),
-  logout: () =>
-    set({
+      // Auth
       user: null,
       accessToken: null,
       refreshToken: null,
       isAuthenticated: false,
-      currentView: 'welcome',
-      previousView: null,
-      queues: [],
-      userTokens: [],
-      notifications: [],
+      setAuth: (user, accessToken, refreshToken) =>
+        set({
+          user,
+          accessToken,
+          refreshToken,
+          isAuthenticated: true,
+        }),
+      logout: () =>
+        set({
+          user: null,
+          accessToken: null,
+          refreshToken: null,
+          isAuthenticated: false,
+          currentView: 'welcome',
+          previousView: null,
+          queues: [],
+          userTokens: [],
+          notifications: [],
+          selectedQueue: null,
+          selectedToken: null,
+        }),
+
+      // Selected items
+      selectedQueueId: null,
       selectedQueue: null,
+      setSelectedQueue: (queue) =>
+        set({
+          selectedQueue: queue,
+          selectedQueueId: queue?.id || null,
+        }),
+
       selectedToken: null,
+      setSelectedToken: (token) => set({ selectedToken: token }),
+
+      // Queues
+      queues: [],
+      setQueues: (queues) => set({ queues }),
+
+      // User tokens
+      userTokens: [],
+      setUserTokens: (tokens) => set({ userTokens: tokens }),
+
+      // Notifications
+      notifications: [],
+      setNotifications: (notifications) => set({ notifications }),
+      unreadCount: 0,
+      setUnreadCount: (count) => set({ unreadCount: count }),
+
+      // Loading states
+      isLoading: false,
+      setLoading: (loading) => set({ isLoading: loading }),
+      error: null,
+      setError: (error) => set({ error }),
+
+      // Real-time
+      socketConnected: false,
+      setSocketConnected: (connected) => set({ socketConnected: connected }),
+
+      // Theme
+      theme: 'dark',
+      toggleTheme: () => set((state) => ({ theme: state.theme === 'dark' ? 'light' : 'dark' })),
+
+      // Sidebar
+      sidebarOpen: false,
+      toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
+      setSidebarOpen: (open) => set({ sidebarOpen: open }),
     }),
-
-  // Selected items
-  selectedQueueId: null,
-  selectedQueue: null,
-  setSelectedQueue: (queue) =>
-    set({
-      selectedQueue: queue,
-      selectedQueueId: queue?.id || null,
-    }),
-
-  selectedToken: null,
-  setSelectedToken: (token) => set({ selectedToken: token }),
-
-  // Queues
-  queues: [],
-  setQueues: (queues) => set({ queues }),
-
-  // User tokens
-  userTokens: [],
-  setUserTokens: (tokens) => set({ userTokens: tokens }),
-
-  // Notifications
-  notifications: [],
-  setNotifications: (notifications) => set({ notifications }),
-  unreadCount: 0,
-  setUnreadCount: (count) => set({ unreadCount: count }),
-
-  // Loading states
-  isLoading: false,
-  setLoading: (loading) => set({ isLoading: loading }),
-  error: null,
-  setError: (error) => set({ error }),
-
-  // Real-time
-  socketConnected: false,
-  setSocketConnected: (connected) => set({ socketConnected: connected }),
-
-  // Theme
-  theme: 'dark',
-  toggleTheme: () => set((state) => ({ theme: state.theme === 'dark' ? 'light' : 'dark' })),
-
-  // Sidebar
-  sidebarOpen: false,
-  toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
-  setSidebarOpen: (open) => set({ sidebarOpen: open }),
-}))
+    {
+      name: 'queueSevaAuth',
+      // Only persist auth-related fields
+      partialize: (state) => ({
+        user: state.user,
+        accessToken: state.accessToken,
+        refreshToken: state.refreshToken,
+        isAuthenticated: state.isAuthenticated,
+        theme: state.theme,
+      }),
+    }
+  )
+)

@@ -76,23 +76,15 @@ function LayoutWithSidebar({ children }: { children: React.ReactNode }) {
 }
 
 export default function Home() {
-  const { currentView, isAuthenticated, setAuth, navigate } = useAppStore()
+  const { currentView, isAuthenticated, user, accessToken, navigate } = useAppStore()
   const [initialized, setInitialized] = useState(false)
 
-  // Splash screen then auto-navigate
+  // On mount, navigate based on auth state (persisted by Zustand)
   useEffect(() => {
     const timer = setTimeout(() => {
-      // Check for stored auth
-      const storedAuth = localStorage.getItem('queueSevaAuth')
-      if (storedAuth) {
-        try {
-          const parsed = JSON.parse(storedAuth)
-          apiClient.setAccessToken(parsed.accessToken)
-          setAuth(parsed.user, parsed.accessToken, parsed.refreshToken)
-          navigate(parsed.user.role === 'ADMIN' ? 'admin-dashboard' : 'dashboard')
-        } catch {
-          navigate('welcome')
-        }
+      if (isAuthenticated && user) {
+        apiClient.setAccessToken(accessToken)
+        navigate(user.role === 'ADMIN' ? 'admin-dashboard' : 'dashboard')
       } else {
         navigate('welcome')
       }
@@ -102,27 +94,12 @@ export default function Home() {
     return () => clearTimeout(timer)
   }, [])
 
-  // Persist auth state
+  // Sync API client token when auth changes
   useEffect(() => {
-    if (initialized && isAuthenticated) {
-      const state = useAppStore.getState()
-      localStorage.setItem(
-        'queueSevaAuth',
-        JSON.stringify({
-          user: state.user,
-          accessToken: state.accessToken,
-          refreshToken: state.refreshToken,
-        })
-      )
+    if (accessToken) {
+      apiClient.setAccessToken(accessToken)
     }
-  }, [isAuthenticated, initialized])
-
-  // Clear storage on logout
-  useEffect(() => {
-    if (initialized && !isAuthenticated) {
-      localStorage.removeItem('queueSevaAuth')
-    }
-  }, [isAuthenticated, initialized])
+  }, [accessToken])
 
   return (
     <AnimatePresence mode="wait">

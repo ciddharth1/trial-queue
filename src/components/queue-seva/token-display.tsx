@@ -104,7 +104,7 @@ export function TokenDisplayScreen() {
                     <ListOrdered className="h-5 w-5 text-[#4F46E5]" />
                   </div>
                   <p className="mt-2 text-lg font-bold text-white">
-                    #{token.position || token.sequenceNum}
+                    #{token.position ?? token.sequenceNum}
                   </p>
                   <p className="text-[10px] text-slate-500">Position</p>
                 </div>

@@ -174,7 +174,7 @@ export function UserDashboard() {
     try {
       const [queuesRes, tokensRes] = await Promise.all([
         apiClient.getQueues({ status: 'ACTIVE' }),
-        user ? apiClient.getTokens({ userId: user.id, status: 'WAITING' }) : Promise.resolve(null),
+        user ? apiClient.getTokens({ userId: user.id }) : Promise.resolve(null),
       ])
 
       if (queuesRes.success && queuesRes.data) {

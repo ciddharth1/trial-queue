@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
   BarChart3,
@@ -12,42 +13,78 @@ import {
   ArrowUpRight,
 } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
+import { apiClient } from '@/lib/api-client'
 import { Header } from './header'
 
-// Simulated analytics data
-const weeklyData = [
-  { day: 'Mon', joined: 85, served: 78, cancelled: 5 },
-  { day: 'Tue', joined: 92, served: 88, cancelled: 3 },
-  { day: 'Wed', joined: 110, served: 102, cancelled: 6 },
-  { day: 'Thu', joined: 95, served: 90, cancelled: 4 },
-  { day: 'Fri', joined: 125, served: 118, cancelled: 5 },
-  { day: 'Sat', joined: 140, served: 132, cancelled: 6 },
-  { day: 'Sun', joined: 78, served: 72, cancelled: 4 },
-]
-
-const peakHours = [
-  { hour: '8-9 AM', traffic: 15, percent: 25 },
-  { hour: '9-10 AM', traffic: 28, percent: 47 },
-  { hour: '10-11 AM', traffic: 42, percent: 70 },
-  { hour: '11-12 PM', traffic: 55, percent: 92 },
-  { hour: '12-1 PM', traffic: 60, percent: 100 },
-  { hour: '1-2 PM', traffic: 48, percent: 80 },
-  { hour: '2-3 PM', traffic: 38, percent: 63 },
-  { hour: '3-4 PM', traffic: 32, percent: 53 },
-  { hour: '4-5 PM', traffic: 25, percent: 42 },
-  { hour: '5-6 PM', traffic: 18, percent: 30 },
-]
-
-const queuePerformance = [
-  { name: 'General Service', prefix: 'A', served: 156, wait: 12, noShow: 3, satisfaction: 94 },
-  { name: 'Priority Counter', prefix: 'B', served: 89, wait: 8, noShow: 1, satisfaction: 97 },
-  { name: 'Billing & Payments', prefix: 'C', served: 72, wait: 15, noShow: 5, satisfaction: 88 },
-  { name: 'VIP Service', prefix: 'D', served: 34, wait: 4, noShow: 0, satisfaction: 99 },
-  { name: 'Returns & Exchange', prefix: 'E', served: 48, wait: 18, noShow: 7, satisfaction: 82 },
-]
+interface DailyData {
+  date: string
+  joined: number
+  served: number
+  cancelled: number
+  noShow: number
+  avgWaitTime: number
+  avgServiceTime: number
+}
 
 export function AdminAnalyticsScreen() {
   const { navigate } = useAppStore()
+  const [loading, setLoading] = useState(true)
+  const [analytics, setAnalytics] = useState<any>(null)
+  const [weeklyData, setWeeklyData] = useState<DailyData[]>([])
+
+  useEffect(() => {
+    loadAnalytics()
+  }, [])
+
+  const loadAnalytics = async () => {
+    setLoading(true)
+    try {
+      const result = await apiClient.getAdminAnalytics({ days: 7 })
+      if (result.success && result.data) {
+        setAnalytics(result.data)
+        const analyticsArr = result.data.analytics || result.data.dailyTraffic || []
+        if (Array.isArray(analyticsArr) && analyticsArr.length > 0) {
+          setWeeklyData(
+            analyticsArr.map((a: any) => ({
+              date: new Date(a.date).toLocaleDateString('en', { weekday: 'short' }),
+              joined: a.totalJoined || a.joined || 0,
+              served: a.totalServed || a.served || 0,
+              cancelled: a.totalCancelled || a.cancelled || 0,
+              noShow: a.totalNoShow || a.noShow || 0,
+              avgWaitTime: a.avgWaitTime || 0,
+              avgServiceTime: a.avgServiceTime || 0,
+            }))
+          )
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load analytics:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const maxJoined = Math.max(...weeklyData.map(d => d.joined), 1)
+
+  const summary = analytics?.summary || {}
+  const peakHours = analytics?.peakHours || []
+
+  // Calculate KPIs from real data
+  const totalServed = weeklyData.reduce((sum, d) => sum + d.served, 0)
+  const totalJoined = weeklyData.reduce((sum, d) => sum + d.joined, 0)
+  const totalCancelled = weeklyData.reduce((sum, d) => sum + d.cancelled, 0)
+  const avgWaitMin = weeklyData.length > 0
+    ? Math.round(weeklyData.reduce((sum, d) => sum + d.avgWaitTime, 0) / weeklyData.length / 60)
+    : 0
+  const avgServiceMin = weeklyData.length > 0
+    ? Math.round(weeklyData.reduce((sum, d) => sum + d.avgServiceTime, 0) / weeklyData.length / 60)
+    : 0
+  const noShowRate = totalJoined > 0 ? ((totalCancelled / totalJoined) * 100).toFixed(1) : '0'
+  const satisfactionRate = totalJoined > 0 ? Math.round(((totalJoined - totalCancelled) / totalJoined) * 100) : 0
+  const throughput = weeklyData.length > 0 ? Math.round(totalServed / weeklyData.length) : 0
+
+  // Queue performance from analytics data
+  const queuePerformance = analytics?.queuePerformance || []
 
   return (
     <div className="flex flex-1 flex-col bg-[#0F172A]">
@@ -68,27 +105,39 @@ export function AdminAnalyticsScreen() {
               </div>
               <BarChart3 className="h-4 w-4 text-slate-600" />
             </div>
-            <div className="flex items-end gap-2 h-40">
-              {weeklyData.map((day, i) => (
-                <div key={day.day} className="flex flex-1 flex-col items-center gap-1">
-                  <div className="flex w-full items-end gap-0.5 h-32">
-                    <motion.div
-                      className="flex-1 rounded-t bg-[#4F46E5]"
-                      initial={{ height: 0 }}
-                      animate={{ height: `${(day.joined / 140) * 100}%` }}
-                      transition={{ delay: i * 0.05, duration: 0.5 }}
-                    />
-                    <motion.div
-                      className="flex-1 rounded-t bg-[#06B6D4]"
-                      initial={{ height: 0 }}
-                      animate={{ height: `${(day.served / 140) * 100}%` }}
-                      transition={{ delay: i * 0.05 + 0.1, duration: 0.5 }}
-                    />
+            {loading ? (
+              <div className="flex items-end gap-2 h-40">
+                {[1,2,3,4,5,6,7].map(i => (
+                  <div key={i} className="flex-1 animate-pulse bg-slate-800/50 rounded-t h-full" />
+                ))}
+              </div>
+            ) : weeklyData.length > 0 ? (
+              <div className="flex items-end gap-2 h-40">
+                {weeklyData.map((day, i) => (
+                  <div key={day.date} className="flex flex-1 flex-col items-center gap-1">
+                    <div className="flex w-full items-end gap-0.5 h-32">
+                      <motion.div
+                        className="flex-1 rounded-t bg-[#4F46E5]"
+                        initial={{ height: 0 }}
+                        animate={{ height: `${(day.joined / maxJoined) * 100}%` }}
+                        transition={{ delay: i * 0.05, duration: 0.5 }}
+                      />
+                      <motion.div
+                        className="flex-1 rounded-t bg-[#06B6D4]"
+                        initial={{ height: 0 }}
+                        animate={{ height: `${(day.served / maxJoined) * 100}%` }}
+                        transition={{ delay: i * 0.05 + 0.1, duration: 0.5 }}
+                      />
+                    </div>
+                    <span className="text-[9px] text-slate-600">{day.date}</span>
                   </div>
-                  <span className="text-[9px] text-slate-600">{day.day}</span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-40 text-sm text-slate-500">
+                No analytics data available yet
+              </div>
+            )}
             <div className="mt-3 flex items-center justify-center gap-4">
               <div className="flex items-center gap-1.5">
                 <div className="h-2 w-2 rounded-full bg-[#4F46E5]" />
@@ -117,30 +166,36 @@ export function AdminAnalyticsScreen() {
                 </div>
                 <Clock className="h-4 w-4 text-slate-600" />
               </div>
-              <div className="space-y-2">
-                {peakHours.map((hour, i) => (
-                  <motion.div
-                    key={hour.hour}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.15 + i * 0.03 }}
-                    className="flex items-center gap-3"
-                  >
-                    <span className="w-16 text-[10px] text-slate-500">{hour.hour}</span>
-                    <div className="flex-1 h-5 overflow-hidden rounded-full bg-slate-800/50">
-                      <motion.div
-                        className="h-full rounded-full bg-gradient-to-r from-[#4F46E5] to-[#06B6D4]"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${hour.percent}%` }}
-                        transition={{ delay: 0.2 + i * 0.03, duration: 0.6 }}
-                      />
-                    </div>
-                    <span className="w-8 text-right text-[10px] font-semibold text-slate-400">
-                      {hour.traffic}
-                    </span>
-                  </motion.div>
-                ))}
-              </div>
+              {peakHours.length > 0 ? (
+                <div className="space-y-2">
+                  {peakHours.map((hour: any, i: number) => (
+                    <motion.div
+                      key={hour.hour || i}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.15 + i * 0.03 }}
+                      className="flex items-center gap-3"
+                    >
+                      <span className="w-16 text-[10px] text-slate-500">{hour.hour || `${i}:00`}</span>
+                      <div className="flex-1 h-5 overflow-hidden rounded-full bg-slate-800/50">
+                        <motion.div
+                          className="h-full rounded-full bg-gradient-to-r from-[#4F46E5] to-[#06B6D4]"
+                          initial={{ width: 0 }}
+                          animate={{ width: `${hour.percent || (hour.count / Math.max(...peakHours.map((h: any) => h.count || 0), 1)) * 100}%` }}
+                          transition={{ delay: 0.2 + i * 0.03, duration: 0.6 }}
+                        />
+                      </div>
+                      <span className="w-8 text-right text-[10px] font-semibold text-slate-400">
+                        {hour.count || hour.traffic || 0}
+                      </span>
+                    </motion.div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex items-center justify-center h-32 text-xs text-slate-500">
+                  Peak hours data will appear with more usage
+                </div>
+              )}
             </motion.div>
 
             {/* Queue Performance Table */}
@@ -153,56 +208,65 @@ export function AdminAnalyticsScreen() {
               <div className="mb-4 flex items-center justify-between">
                 <div>
                   <h3 className="text-sm font-semibold text-white">Queue Performance</h3>
-                  <p className="text-xs text-slate-500">Per-queue metrics today</p>
+                  <p className="text-xs text-slate-500">Per-queue metrics</p>
                 </div>
                 <TrendingUp className="h-4 w-4 text-slate-600" />
               </div>
-              <div className="space-y-3">
-                {queuePerformance.map((queue, i) => (
-                  <motion.div
-                    key={queue.prefix}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.25 + i * 0.05 }}
-                    className="flex items-center gap-3 rounded-xl bg-slate-800/20 p-3"
-                  >
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#4F46E5]/10 text-sm font-bold text-[#4F46E5]">
-                      {queue.prefix}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-white truncate">{queue.name}</p>
-                      <div className="mt-0.5 flex items-center gap-3 text-[10px] text-slate-500">
-                        <span className="flex items-center gap-0.5">
-                          <CheckCircle2 className="h-2.5 w-2.5 text-emerald-400" />
-                          {queue.served}
-                        </span>
-                        <span className="flex items-center gap-0.5">
-                          <Clock className="h-2.5 w-2.5 text-[#06B6D4]" />
-                          {queue.wait}m
-                        </span>
-                        <span className="flex items-center gap-0.5">
-                          <AlertTriangle className="h-2.5 w-2.5 text-amber-400" />
-                          {queue.noShow}
-                        </span>
+              {queuePerformance.length > 0 ? (
+                <div className="space-y-3">
+                  {queuePerformance.map((queue: any, i: number) => (
+                    <motion.div
+                      key={queue.prefix || queue.name || i}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.25 + i * 0.05 }}
+                      className="flex items-center gap-3 rounded-xl bg-slate-800/20 p-3"
+                    >
+                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#4F46E5]/10 text-sm font-bold text-[#4F46E5]">
+                        {queue.prefix || '?'}
                       </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-bold text-white">{queue.satisfaction}%</p>
-                      <p className="text-[9px] text-slate-500">Satisfaction</p>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-white truncate">{queue.name}</p>
+                        <div className="mt-0.5 flex items-center gap-3 text-[10px] text-slate-500">
+                          <span className="flex items-center gap-0.5">
+                            <CheckCircle2 className="h-2.5 w-2.5 text-emerald-400" />
+                            {queue.served || queue.totalServed || 0}
+                          </span>
+                          <span className="flex items-center gap-0.5">
+                            <Clock className="h-2.5 w-2.5 text-[#06B6D4]" />
+                            {queue.wait || Math.round((queue.avgWaitTime || 0) / 60)}m
+                          </span>
+                          <span className="flex items-center gap-0.5">
+                            <AlertTriangle className="h-2.5 w-2.5 text-amber-400" />
+                            {queue.noShow || queue.totalNoShow || 0}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-white">{queue.satisfaction || '--'}%</p>
+                        <p className="text-[9px] text-slate-500">Satisfaction</p>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {/* Show from weekly data summary */}
+                  <div className="flex items-center justify-center h-32 text-xs text-slate-500">
+                    Performance data will appear with more usage
+                  </div>
+                </div>
+              )}
             </motion.div>
           </div>
 
           {/* KPI Cards */}
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             {[
-              { label: 'Avg Service Time', value: '5.2m', change: -8, icon: Clock, color: 'text-[#06B6D4]' },
-              { label: 'No-Show Rate', value: '3.4%', change: -12, icon: XCircle, color: 'text-amber-400' },
-              { label: 'Satisfaction', value: '94%', change: 2, icon: CheckCircle2, color: 'text-emerald-400' },
-              { label: 'Throughput', value: '48/hr', change: 15, icon: ArrowUpRight, color: 'text-[#4F46E5]' },
+              { label: 'Avg Service Time', value: `${avgServiceMin}m`, change: -8, icon: Clock, color: 'text-[#06B6D4]' },
+              { label: 'No-Show Rate', value: `${noShowRate}%`, change: -12, icon: XCircle, color: 'text-amber-400' },
+              { label: 'Satisfaction', value: `${satisfactionRate}%`, change: 2, icon: CheckCircle2, color: 'text-emerald-400' },
+              { label: 'Throughput', value: `${throughput}/day`, change: 15, icon: ArrowUpRight, color: 'text-[#4F46E5]' },
             ].map((kpi, i) => (
               <motion.div
                 key={kpi.label}
