@@ -117,10 +117,9 @@ export async function POST(request: NextRequest) {
 
     return successResponse(
       {
-        token: result.token,
-        member: result.member,
+        ...result.token,
         position,
-        estimatedWait,
+        queueName: queue.name,
       },
       'Successfully joined queue',
       201,

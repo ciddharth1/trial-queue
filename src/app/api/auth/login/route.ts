@@ -40,6 +40,11 @@ export async function POST(request: NextRequest) {
       role: user.role,
     })
 
+    // Delete existing sessions for this user (to avoid unique constraint issues)
+    await db.session.deleteMany({
+      where: { userId: user.id },
+    })
+
     // Create session
     const expiresAt = new Date()
     expiresAt.setDate(expiresAt.getDate() + 7)
