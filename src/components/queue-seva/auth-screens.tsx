@@ -201,7 +201,7 @@ export function RegisterScreen() {
     setError(null)
 
     try {
-      const result = await apiClient.register(email, name, password)
+      const result = await apiClient.register(email, name, password, phone)
       if (result.success && result.data) {
         apiClient.setAccessToken(result.data.accessToken)
         setAuth(result.data.user, result.data.accessToken, result.data.refreshToken)

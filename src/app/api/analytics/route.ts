@@ -1,23 +1,21 @@
 import { NextRequest } from 'next/server'
 import { db } from '@/lib/db'
-import { authenticateRequest } from '@/lib/auth'
 import { successResponse, errorResponse } from '@/lib/api-response'
 
-// GET - Get queue analytics (public or authenticated)
+// GET - Get queue analytics (queue-specific or overall)
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const queueId = searchParams.get('queueId')
     const dateRange = searchParams.get('dateRange') || '7d'
 
-    if (!queueId) {
-      return errorResponse('Queue ID is required', 400)
-    }
-
-    // Check queue exists
-    const queue = await db.queue.findUnique({ where: { id: queueId } })
-    if (!queue) {
-      return errorResponse('Queue not found', 404)
+    // If queueId provided, get queue-specific analytics; otherwise get overall analytics
+    let queue: Awaited<ReturnType<typeof db.queue.findUnique>> = null
+    if (queueId) {
+      queue = await db.queue.findUnique({ where: { id: queueId } })
+      if (!queue) {
+        return errorResponse('Queue not found', 404)
+      }
     }
 
     // Calculate date range
@@ -38,38 +36,34 @@ export async function GET(request: NextRequest) {
         startDate.setDate(startDate.getDate() - 7)
     }
 
+    // Build where clause - filter by queueId if provided
+    const analyticsWhere: Record<string, unknown> = {
+      date: { gte: startDate, lte: endDate },
+    }
+    if (queueId) analyticsWhere.queueId = queueId
+
     // Get analytics records
     const analytics = await db.queueAnalytics.findMany({
-      where: {
-        queueId,
-        date: { gte: startDate, lte: endDate },
-      },
+      where: analyticsWhere,
       orderBy: { date: 'asc' },
     })
 
-    // Get current queue performance
+    // Get current performance
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
+    const tokenWhere = queueId ? { queueId } : {}
+    const tokenWhereToday = { ...tokenWhere, createdAt: { gte: today } }
+
     const [todayJoined, todayServed, todayCancelled, todayNoShow, currentWaiting, avgWaitToday] = await Promise.all([
-      db.token.count({
-        where: { queueId, createdAt: { gte: today } },
-      }),
-      db.token.count({
-        where: { queueId, status: 'COMPLETED', completedAt: { gte: today } },
-      }),
-      db.token.count({
-        where: { queueId, status: 'CANCELLED', createdAt: { gte: today } },
-      }),
-      db.token.count({
-        where: { queueId, status: 'EXPIRED', createdAt: { gte: today } },
-      }),
-      db.token.count({
-        where: { queueId, status: 'WAITING' },
-      }),
+      db.token.count({ where: tokenWhereToday }),
+      db.token.count({ where: { ...tokenWhere, status: 'COMPLETED', completedAt: { gte: today } } }),
+      db.token.count({ where: { ...tokenWhereToday, status: 'CANCELLED' } }),
+      db.token.count({ where: { ...tokenWhereToday, status: 'EXPIRED' } }),
+      db.token.count({ where: { ...tokenWhere, status: 'WAITING' } }),
       db.token.aggregate({
         where: {
-          queueId,
+          ...tokenWhere,
           status: 'COMPLETED',
           completedAt: { gte: today },
           estimatedWait: { not: null },
@@ -81,7 +75,7 @@ export async function GET(request: NextRequest) {
     // Peak hours analysis from token data
     const tokensByHour = await db.token.findMany({
       where: {
-        queueId,
+        ...tokenWhere,
         createdAt: { gte: startDate },
       },
       select: { createdAt: true },
@@ -98,16 +92,54 @@ export async function GET(request: NextRequest) {
       .sort((a, b) => b.count - a.count)
       .slice(0, 5)
 
-    // Daily traffic for chart
-    const dailyTraffic = analytics.map((a) => ({
-      date: a.date,
-      joined: a.totalJoined,
-      served: a.totalServed,
-      cancelled: a.totalCancelled,
-      noShow: a.totalNoShow,
-      avgWaitTime: a.avgWaitTime,
-      avgServiceTime: a.avgServiceTime,
-    }))
+    // Daily traffic for chart - aggregate across all queues if no queueId
+    const dailyTraffic = queueId
+      ? analytics.map((a) => ({
+          date: a.date,
+          joined: a.totalJoined,
+          served: a.totalServed,
+          cancelled: a.totalCancelled,
+          noShow: a.totalNoShow,
+          avgWaitTime: a.avgWaitTime,
+          avgServiceTime: a.avgServiceTime,
+        }))
+      : (() => {
+          // Aggregate daily traffic across all queues
+          const dayMap = new Map<string, { date: Date; joined: number; served: number; cancelled: number; noShow: number; avgWaitTime: number; avgServiceTime: number; count: number }>()
+          analytics.forEach((a) => {
+            const dateKey = new Date(a.date).toISOString().split('T')[0]
+            const existing = dayMap.get(dateKey)
+            if (existing) {
+              existing.joined += a.totalJoined
+              existing.served += a.totalServed
+              existing.cancelled += a.totalCancelled
+              existing.noShow += a.totalNoShow
+              existing.avgWaitTime += a.avgWaitTime
+              existing.avgServiceTime += a.avgServiceTime
+              existing.count += 1
+            } else {
+              dayMap.set(dateKey, {
+                date: a.date,
+                joined: a.totalJoined,
+                served: a.totalServed,
+                cancelled: a.totalCancelled,
+                noShow: a.totalNoShow,
+                avgWaitTime: a.avgWaitTime,
+                avgServiceTime: a.avgServiceTime,
+                count: 1,
+              })
+            }
+          })
+          return Array.from(dayMap.values()).map((d) => ({
+            date: d.date,
+            joined: d.joined,
+            served: d.served,
+            cancelled: d.cancelled,
+            noShow: d.noShow,
+            avgWaitTime: Math.round(d.avgWaitTime / d.count),
+            avgServiceTime: Math.round(d.avgServiceTime / d.count),
+          }))
+        })()
 
     // Aggregate summary
     const summary = {
@@ -118,22 +150,29 @@ export async function GET(request: NextRequest) {
       currentWaiting,
       avgWaitTimeToday: avgWaitToday._avg.estimatedWait
         ? Math.round(avgWaitToday._avg.estimatedWait)
-        : queue.avgServiceTime,
+        : (queue?.avgServiceTime || 300),
       serviceRate: todayJoined > 0 ? Math.round((todayServed / todayJoined) * 100) : 0,
     }
 
-    return successResponse({
-      queue: {
-        id: queue.id,
-        name: queue.name,
-        prefix: queue.prefix,
-        status: queue.status,
-      },
+    // Build response
+    const responseData: Record<string, unknown> = {
       summary,
       dailyTraffic,
       peakHours,
       analytics,
-    })
+    }
+
+    // Add queue info only if queueId was provided
+    if (queue) {
+      responseData.queue = {
+        id: queue.id,
+        name: queue.name,
+        prefix: queue.prefix,
+        status: queue.status,
+      }
+    }
+
+    return successResponse(responseData)
   } catch (error) {
     console.error('Queue analytics error:', error)
     return errorResponse('Internal server error', 500)

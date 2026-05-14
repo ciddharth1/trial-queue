@@ -26,8 +26,15 @@ function formatWaitTime(seconds: number | null): string {
 }
 
 // Simulated live positions for demo
-function generateLivePositions(tokenPosition: number, totalInQueue: number) {
-  const positions = []
+interface LivePosition {
+  position: number
+  tokenNumber: string
+  status: string
+  estimatedWait: number
+}
+
+function generateLivePositions(tokenPosition: number, totalInQueue: number): LivePosition[] {
+  const positions: LivePosition[] = []
   for (let i = 1; i <= Math.min(totalInQueue, 10); i++) {
     const status = i < tokenPosition ? 'serving' : i === tokenPosition ? 'you' : 'waiting'
     positions.push({
@@ -44,7 +51,7 @@ export function LiveTrackerScreen() {
   const { userTokens, selectedToken, navigate } = useAppStore()
   const [simulatedPosition, setSimulatedPosition] = useState<number | null>(null)
 
-  const activeToken = selectedToken || userTokens.find((t) => ['WAITING', 'CALLED'].includes(t.status)) || null
+  const activeToken: AppToken | null = selectedToken || userTokens.find((t) => ['WAITING', 'CALLED'].includes(t.status)) || null
   const basePosition = activeToken?.position || activeToken?.sequenceNum || 0
   const currentPosition = simulatedPosition ?? basePosition
   const totalInQueue = Math.max(basePosition + 5, 15)

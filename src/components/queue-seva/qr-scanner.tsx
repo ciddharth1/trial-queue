@@ -54,7 +54,7 @@ export function QRScannerScreen() {
     if (!scannedResult || !user) return
     setJoining(true)
     try {
-      const result = await apiClient.joinQueue(scannedResult.queueId, user.id)
+      const result = await apiClient.joinQueue(scannedResult.queueId)
       if (result.success && result.data) {
         navigate('token-display')
       } else {

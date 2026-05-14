@@ -145,10 +145,12 @@ model QueueMember {
   queue Queue @relation(fields: [queueId], references: [id], onDelete: Cascade)
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([queueId, userId, status]) // Prevent duplicate active entries
+  // Removed @@unique([queueId, userId, status]) - the API handles duplicate checks
+  // and the constraint prevented users from rejoining queues after leaving
   @@index([queueId, status])
   @@index([userId])
   @@index([queueId, position])
+  @@index([queueId, userId, status])
 }
 
 // ─── TOKEN SYSTEM ─────────────────────────────────────

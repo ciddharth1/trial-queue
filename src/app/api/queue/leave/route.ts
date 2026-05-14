@@ -1,17 +1,23 @@
 import { NextRequest } from 'next/server'
 import { db } from '@/lib/db'
+import { authenticateRequest } from '@/lib/auth'
 import { successResponse, errorResponse } from '@/lib/api-response'
-import { recalculatePositions, updateQueueLength } from '@/lib/queue-utils'
+import { recalculatePositions } from '@/lib/queue-utils'
 
 // POST - Leave a queue
 export async function POST(request: NextRequest) {
   try {
+    // Authenticate user from JWT token
+    const { user, error: authError } = await authenticateRequest(request)
+    if (authError || !user) return authError!
+
     const body = await request.json()
-    const { queueId, userId } = body
+    const { queueId } = body
+    const userId = user.id
 
     // Validate required fields
-    if (!queueId || !userId) {
-      return errorResponse('Queue ID and User ID are required', 400)
+    if (!queueId) {
+      return errorResponse('Queue ID is required', 400)
     }
 
     // Check queue exists

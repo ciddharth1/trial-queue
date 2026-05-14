@@ -40,12 +40,12 @@ class ApiClient {
   }
 
   // ─── AUTH ────────────────────────────────────────────
-  async register(email: string, name: string, password: string) {
+  async register(email: string, name: string, password: string, phone?: string) {
     return this.request<{ user: AppUser; accessToken: string; refreshToken: string }>(
       '/auth/register',
       {
         method: 'POST',
-        body: JSON.stringify({ email, name, password }),
+        body: JSON.stringify({ email, name, password, phone }),
       }
     )
   }
@@ -119,17 +119,17 @@ class ApiClient {
     return this.request<void>(`/queue/${id}`, { method: 'DELETE' })
   }
 
-  async joinQueue(queueId: string, userId: string) {
+  async joinQueue(queueId: string) {
     return this.request<AppToken>('/queue/join', {
       method: 'POST',
-      body: JSON.stringify({ queueId, userId }),
+      body: JSON.stringify({ queueId }),
     })
   }
 
-  async leaveQueue(queueId: string, userId: string) {
+  async leaveQueue(queueId: string) {
     return this.request<void>('/queue/leave', {
       method: 'POST',
-      body: JSON.stringify({ queueId, userId }),
+      body: JSON.stringify({ queueId }),
     })
   }
 

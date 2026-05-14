@@ -136,7 +136,7 @@ interface ErrorResponse {
 // ============================================================================
 
 const PORT = 3003
-const JWT_SECRET = process.env.JWT_SECRET || 'queue-seva-jwt-secret-key-change-in-production'
+const JWT_SECRET = process.env.JWT_SECRET || 'queue-seva-jwt-secret-key-2024'
 const ADMIN_ROOM_PREFIX = 'admin'
 const QUEUE_ROOM_PREFIX = 'queue'
 const ORG_ROOM_PREFIX = 'org'

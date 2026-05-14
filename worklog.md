@@ -48,3 +48,33 @@ Work Log:
 Stage Summary:
 - Production-ready deployment configuration
 - CI/CD pipeline with automated linting, testing, and deployment
+
+---
+Task ID: fix-backend-frontend-issues
+Agent: main
+Task: Check and fix both backend and frontend issues in Queue Seva platform
+
+Work Log:
+- Verified SQLite database permissions (already fixed - rw-rw-rw-)
+- Tested all API endpoints and identified 5 critical issues
+- Fixed queue join endpoint: Added authenticateRequest middleware to extract userId from JWT instead of requiring it in request body
+- Fixed queue leave endpoint: Same auth-based userId fix
+- Fixed "user defined multiple times" compilation error in join route (removed redundant user lookup since auth already provides it)
+- Fixed analytics endpoint: Now supports both queue-specific (with queueId) and overall analytics (without queueId)
+- Fixed QueueMember unique constraint: Removed @@unique([queueId, userId, status]) which prevented users from rejoining queues after leaving
+- Updated API client: joinQueue and leaveQueue methods no longer require userId parameter
+- Updated frontend components (queue-detail.tsx, qr-scanner.tsx) to use new join/leave signatures
+- Added phone parameter to register method in API client
+- Fixed JWT secret mismatch in socket service (was using different secret than main app)
+- Fixed TypeScript errors in analytics/route.ts, live-tracker.tsx, token-display.tsx
+- Restarted socket service with correct JWT secret
+- Ran comprehensive end-to-end test: all endpoints working correctly
+
+Stage Summary:
+- All backend API endpoints working correctly (register, login, auth/me, queues CRUD, join/leave, tokens, analytics, notifications, service centers, admin)
+- Frontend loads correctly (HTTP 200)
+- Socket service running on port 3003 with matching JWT secret
+- No TypeScript errors in src/ directory
+- Key architectural fix: join/leave now use JWT-based auth instead of client-sent userId (more secure)
+- Users can now rejoin queues after leaving (unique constraint fix)
+- Analytics endpoint works both with and without queueId parameter

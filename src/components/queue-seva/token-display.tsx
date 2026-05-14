@@ -17,7 +17,7 @@ function formatWaitTime(seconds: number | null): string {
 }
 
 export function TokenDisplayScreen() {
-  const { selectedToken, navigate, queue } = useAppStore()
+  const { selectedToken, navigate, selectedQueue } = useAppStore()
   // Note: selectedToken might be from userTokens or a freshly joined token
 
   const token = selectedToken

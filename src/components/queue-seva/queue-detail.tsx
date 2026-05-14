@@ -61,7 +61,7 @@ export function QueueDetailScreen() {
     if (!queue || !user) return
     setJoining(true)
     try {
-      const result = await apiClient.joinQueue(queue.id, user.id)
+      const result = await apiClient.joinQueue(queue.id)
       if (result.success && result.data) {
         const token = result.data as AppToken
         token.queueName = queue.name
