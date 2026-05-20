@@ -317,10 +317,10 @@ export function UserDashboard() {
                   Your Active Tokens
                 </h2>
                 <button
-                  onClick={() => navigate('live-tracker')}
+                  onClick={() => navigate('my-tickets')}
                   className="text-xs text-primary hover:underline"
                 >
-                  Track Live
+                  View All Tickets
                 </button>
               </div>
               <div className="space-y-3">

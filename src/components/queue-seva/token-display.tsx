@@ -96,7 +96,7 @@ export function TokenDisplayScreen() {
           tokenNumber: token.tokenNumber,
           reason: 'CANCELLED',
         })
-        navigate('dashboard')
+        navigate('my-tickets')
       } else {
         toast.error(result.error || 'Failed to leave queue')
       }

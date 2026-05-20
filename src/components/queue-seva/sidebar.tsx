@@ -28,7 +28,7 @@ interface NavItem {
 const userNavItems: NavItem[] = [
   { icon: LayoutDashboard, label: 'Dashboard', view: 'dashboard' },
   { icon: MapPin, label: 'Check-in', view: 'qr-scanner' },
-  { icon: ListOrdered, label: 'My Queues', view: 'queues' },
+  { icon: ListOrdered, label: 'My Tickets', view: 'my-tickets' },
   { icon: Bell, label: 'Notifications', view: 'notifications' },
   { icon: User, label: 'Profile', view: 'profile' },
   { icon: Settings, label: 'Settings', view: 'settings' },
@@ -38,6 +38,7 @@ const adminNavItems: NavItem[] = [
   { icon: LayoutDashboard, label: 'Dashboard', view: 'admin-dashboard', roles: ['ADMIN', 'SUPER_ADMIN'] },
   { icon: BarChart3, label: 'Analytics', view: 'admin-analytics', roles: ['ADMIN', 'SUPER_ADMIN'] },
   { icon: ListOrdered, label: 'Queue Mgmt', view: 'admin-queues', roles: ['ADMIN', 'SUPER_ADMIN'] },
+  { icon: ListOrdered, label: 'My Tickets', view: 'my-tickets' },
   { icon: Users, label: 'All Queues', view: 'queues' },
   { icon: MapPin, label: 'Check-in', view: 'qr-scanner' },
   { icon: Bell, label: 'Notifications', view: 'notifications' },

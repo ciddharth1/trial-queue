@@ -16,6 +16,7 @@ export type AppView =
   | 'branch-checkin'
   | 'token-display'
   | 'live-tracker'
+  | 'my-tickets'
   | 'notifications'
   | 'profile'
   | 'admin-dashboard'

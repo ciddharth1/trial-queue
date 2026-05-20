@@ -60,8 +60,8 @@ export function AdminAnalyticsScreen() {
         const analyticsArr = result.data.analytics || result.data.dailyTraffic || []
         if (Array.isArray(analyticsArr) && analyticsArr.length > 0) {
           setWeeklyData(
-            analyticsArr.map((a: any) => ({
-              date: new Date(a.date).toLocaleDateString('en', { weekday: 'short' }),
+            analyticsArr.map((a: any, index: number) => ({
+              date: `${new Date(a.date).toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric' })}`,
               joined: a.totalJoined || a.joined || 0,
               served: a.totalServed || a.served || 0,
               cancelled: a.totalCancelled || a.cancelled || 0,
@@ -129,7 +129,7 @@ export function AdminAnalyticsScreen() {
             ) : weeklyData.length > 0 ? (
               <div className="flex items-end gap-2 h-40">
                 {weeklyData.map((day, i) => (
-                  <div key={day.date} className="flex flex-1 flex-col items-center gap-1">
+                  <div key={`day-${i}-${day.date}`} className="flex flex-1 flex-col items-center gap-1">
                     <div className="flex w-full items-end gap-0.5 h-32">
                       <motion.div
                         className="flex-1 rounded-t bg-[#4F46E5]"

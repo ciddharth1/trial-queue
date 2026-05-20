@@ -104,7 +104,7 @@ export function QueueDetailScreen() {
           estimatedWaitMinutes: token.estimatedWait ? Math.ceil(token.estimatedWait / 60) : undefined,
         })
         toast.success(`You joined "${queue.name}"! Token: ${token.tokenNumber}`)
-        navigate('token-display')
+        navigate('live-tracker')
       } else {
         toast.error((result as any).error || 'Failed to join queue')
       }

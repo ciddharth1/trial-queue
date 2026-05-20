@@ -17,6 +17,7 @@ import { TokenDisplayScreen } from '@/components/queue-seva/token-display'
 import { LiveTrackerScreen } from '@/components/queue-seva/live-tracker'
 import { QRScannerScreen } from '@/components/queue-seva/qr-scanner'
 import { BranchCheckinScreen } from '@/components/queue-seva/branch-checkin'
+import { MyTicketsScreen } from '@/components/queue-seva/my-tickets'
 import { NotificationsScreen } from '@/components/queue-seva/notifications'
 import { ProfileScreen } from '@/components/queue-seva/profile-screen'
 import { SettingsScreen } from '@/components/queue-seva/settings-screen'
@@ -50,7 +51,9 @@ function ViewRouter({ view }: { view: AppView }) {
     case 'token-display':
       return <LayoutWithSidebar><TokenDisplayScreen /></LayoutWithSidebar>
     case 'live-tracker':
-      return <LayoutWithSidebar><LiveTrackerScreen /></LayoutWithSidebar>
+      return <LiveTrackerScreen />
+    case 'my-tickets':
+      return <MyTicketsScreen />
     case 'notifications':
       return <LayoutWithSidebar><NotificationsScreen /></LayoutWithSidebar>
     case 'profile':

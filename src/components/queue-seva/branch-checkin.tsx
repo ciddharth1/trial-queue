@@ -116,7 +116,7 @@ export function BranchCheckinScreen() {
         emitRefresh('queue-update')
         emitRefresh('token-update')
         toast.success(`You joined "${scanResult.queueName}"! Token: ${token.tokenNumber}`)
-        navigate('token-display')
+        navigate('live-tracker')
       } else {
         setError(result.error || 'Failed to join queue')
       }
@@ -146,7 +146,7 @@ export function BranchCheckinScreen() {
         emitRefresh('queue-update')
         emitRefresh('token-update')
         toast.success(`Checked in! Token: ${token.tokenNumber}`)
-        navigate('token-display')
+        navigate('live-tracker')
       } else {
         setError(result.error || 'Failed to check in')
       }
@@ -455,7 +455,7 @@ export function BranchCheckinScreen() {
           <span className="mt-1 text-xs">Home</span>
         </button>
         <button
-          onClick={() => navigate('token-display')}
+          onClick={() => navigate('my-tickets')}
           className="flex flex-col items-center justify-center text-on-surface-variant px-5 py-1.5 hover:text-primary transition-colors active:scale-90"
         >
           <Ticket className="h-5 w-5" />
