@@ -67,10 +67,16 @@ export async function POST(request: NextRequest) {
         })
       }
 
-      // Update queue length
+      // Update queue length - recalculate from actual member count
+      const activeCount = await tx.queueMember.count({
+        where: {
+          queueId,
+          status: { in: ['WAITING', 'SERVING'] },
+        },
+      })
       await tx.queue.update({
         where: { id: queueId },
-        data: { currentLength: Math.max(0, queue.currentLength - 1) },
+        data: { currentLength: activeCount },
       })
     })
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { motion } from 'framer-motion'
 import {
   Users,
@@ -13,9 +13,11 @@ import {
   ArrowDownRight,
   Building2,
   Hash,
+  RefreshCw,
 } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
 import { apiClient } from '@/lib/api-client'
+import { emitRefresh } from '@/hooks/use-realtime'
 import { Header } from './header'
 
 interface AdminStats {
@@ -25,6 +27,8 @@ interface AdminStats {
   avgWaitTime: number
   totalServiceCenters: number
   totalTokensToday: number
+  recentQueues?: any[]
+  recentTokens?: any[]
 }
 
 function StatCard({
@@ -99,6 +103,22 @@ export function AdminDashboard() {
   const { navigate, user, refreshCounter } = useAppStore()
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [loading, setLoading] = useState(true)
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
+  const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  const loadStats = useCallback(async () => {
+    try {
+      const result = await apiClient.getAdminStats()
+      if (result.success && result.data) {
+        setStats(result.data as AdminStats)
+        setLastRefresh(new Date())
+      }
+    } catch (error) {
+      console.error('Failed to load admin stats:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
     loadStats()
@@ -112,27 +132,13 @@ export function AdminDashboard() {
     }
   }, [refreshCounter])
 
-  // Auto-poll every 8 seconds for real-time updates
+  // Faster auto-poll every 3 seconds for real-time updates
   useEffect(() => {
     const interval = setInterval(() => {
       loadStats()
-    }, 8000)
+    }, 3000)
     return () => clearInterval(interval)
   }, [])
-
-  const loadStats = async () => {
-    setLoading(true)
-    try {
-      const result = await apiClient.getAdminStats()
-      if (result.success && result.data) {
-        setStats(result.data as AdminStats)
-      }
-    } catch (error) {
-      console.error('Failed to load admin stats:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   // Load analytics data for charts
   const [hourlyData, setHourlyData] = useState([12, 19, 8, 25, 32, 28, 45, 52, 38, 42, 35, 28])
@@ -142,7 +148,7 @@ export function AdminDashboard() {
     loadChartData()
   }, [])
 
-  const loadChartData = async () => {
+  const loadChartData = useCallback(async () => {
     try {
       const result = await apiClient.getAdminAnalytics({ days: 7 })
       if (result.success && result.data) {
@@ -155,7 +161,10 @@ export function AdminDashboard() {
     } catch (error) {
       console.error('Failed to load chart data:', error)
     }
-  }
+  }, [])
+
+  // Recent tokens display
+  const recentTokens = stats?.recentTokens || []
 
   return (
     <div className="flex flex-1 flex-col bg-[#0F172A]">
@@ -166,12 +175,31 @@ export function AdminDashboard() {
 
       <main className="flex-1 overflow-y-auto p-4 sm:p-6">
         <div className="mx-auto max-w-6xl space-y-6">
+          {/* Last refresh indicator */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-[10px] text-slate-500">
+              <motion.div
+                className="h-1.5 w-1.5 rounded-full bg-emerald-400"
+                animate={{ opacity: [1, 0.4, 1] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              />
+              <span>Live · Auto-refreshing every 3s</span>
+            </div>
+            <button
+              onClick={() => { loadStats(); loadChartData() }}
+              className="flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] text-slate-500 transition-colors hover:bg-slate-800 hover:text-slate-300"
+            >
+              <RefreshCw className="h-3 w-3" />
+              Refresh now
+            </button>
+          </div>
+
           {/* Stats Grid */}
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <StatCard
               icon={Users}
               label="Total Users"
-              value={stats?.totalUsers ?? 1247}
+              value={stats?.totalUsers ?? 0}
               change={12}
               color="bg-[#4F46E5]/10 text-[#4F46E5]"
               delay={0}
@@ -179,7 +207,7 @@ export function AdminDashboard() {
             <StatCard
               icon={ListOrdered}
               label="Active Queues"
-              value={stats?.activeQueues ?? 18}
+              value={stats?.activeQueues ?? 0}
               change={5}
               color="bg-[#06B6D4]/10 text-[#06B6D4]"
               delay={0.05}
@@ -187,7 +215,7 @@ export function AdminDashboard() {
             <StatCard
               icon={CheckCircle2}
               label="Served Today"
-              value={stats?.tokensServedToday ?? 342}
+              value={stats?.tokensServedToday ?? 0}
               change={18}
               color="bg-emerald-500/10 text-emerald-400"
               delay={0.1}
@@ -195,7 +223,7 @@ export function AdminDashboard() {
             <StatCard
               icon={Clock}
               label="Avg Wait Time"
-              value={`${Math.round((stats?.avgWaitTime ?? 420) / 60)}m`}
+              value={`${Math.round((stats?.avgWaitTime ?? 0) / 60)}m`}
               change={-8}
               color="bg-amber-500/10 text-amber-400"
               delay={0.15}
@@ -262,7 +290,7 @@ export function AdminDashboard() {
                 <Building2 className="h-6 w-6 text-[#4F46E5]" />
               </div>
               <div>
-                <p className="text-xl font-bold text-white">{stats?.totalServiceCenters ?? 6}</p>
+                <p className="text-xl font-bold text-white">{stats?.totalServiceCenters ?? 0}</p>
                 <p className="text-xs text-slate-500">Service Centers</p>
               </div>
             </motion.div>
@@ -277,7 +305,7 @@ export function AdminDashboard() {
                 <Hash className="h-6 w-6 text-[#06B6D4]" />
               </div>
               <div>
-                <p className="text-xl font-bold text-white">{stats?.totalTokensToday ?? 524}</p>
+                <p className="text-xl font-bold text-white">{stats?.totalTokensToday ?? 0}</p>
                 <p className="text-xs text-slate-500">Tokens Today</p>
               </div>
             </motion.div>
@@ -295,19 +323,61 @@ export function AdminDashboard() {
                 <p className="text-xl font-bold text-white">
                   {stats && stats.totalTokensToday > 0
                     ? Math.round((stats.tokensServedToday / stats.totalTokensToday) * 100)
-                    : 94}%
+                    : 0}%
                 </p>
                 <p className="text-xs text-slate-500">Served Rate</p>
               </div>
             </motion.div>
           </div>
 
+          {/* Recent Tokens */}
+          {recentTokens.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.45 }}
+              className="rounded-2xl border border-slate-800/50 bg-gradient-to-b from-slate-900/80 to-slate-900/40 p-5 backdrop-blur-sm"
+            >
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-white">Recent Tokens</h3>
+                <button
+                  onClick={() => navigate('admin-queues')}
+                  className="text-xs text-[#4F46E5] hover:underline"
+                >
+                  View all
+                </button>
+              </div>
+              <div className="space-y-2">
+                {recentTokens.slice(0, 5).map((token: any, i: number) => (
+                  <div key={token.id || i} className="flex items-center gap-3 rounded-xl bg-slate-800/20 p-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#4F46E5]/10 text-xs font-bold text-[#4F46E5]">
+                      {token.tokenNumber?.split('-')[0] || '?'}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-white truncate">{token.tokenNumber}</p>
+                      <p className="text-[10px] text-slate-500">{token.user?.name || 'Unknown'} · {token.queue?.name || 'Queue'}</p>
+                    </div>
+                    <span className={`rounded-full px-2 py-0.5 text-[9px] font-semibold ${
+                      token.status === 'COMPLETED' ? 'bg-emerald-500/10 text-emerald-400' :
+                      token.status === 'CALLED' ? 'bg-[#4F46E5]/10 text-[#4F46E5]' :
+                      token.status === 'SERVING' ? 'bg-[#06B6D4]/10 text-[#06B6D4]' :
+                      token.status === 'CANCELLED' ? 'bg-red-500/10 text-red-400' :
+                      'bg-amber-500/10 text-amber-400'
+                    }`}>
+                      {token.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
           {/* Navigation Cards */}
           <div className="grid gap-4 sm:grid-cols-2">
             <motion.button
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.45 }}
+              transition={{ delay: 0.5 }}
               onClick={() => navigate('admin-analytics')}
               className="flex items-center gap-4 rounded-2xl border border-[#4F46E5]/20 bg-[#4F46E5]/5 p-5 text-left transition-all hover:border-[#4F46E5]/40 hover:bg-[#4F46E5]/10"
             >
@@ -323,7 +393,7 @@ export function AdminDashboard() {
             <motion.button
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
+              transition={{ delay: 0.55 }}
               onClick={() => navigate('admin-queues')}
               className="flex items-center gap-4 rounded-2xl border border-[#06B6D4]/20 bg-[#06B6D4]/5 p-5 text-left transition-all hover:border-[#06B6D4]/40 hover:bg-[#06B6D4]/10"
             >

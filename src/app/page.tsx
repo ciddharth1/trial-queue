@@ -22,6 +22,7 @@ import { AdminDashboard } from '@/components/queue-seva/admin-dashboard'
 import { AdminAnalyticsScreen } from '@/components/queue-seva/admin-analytics'
 import { AdminQueuesScreen } from '@/components/queue-seva/admin-queues'
 import { QueuesListScreen } from '@/components/queue-seva/queues-list'
+import { ThemeInitializer } from '@/components/queue-seva/theme-initializer'
 
 // View router mapping
 function ViewRouter({ view }: { view: AppView }) {
@@ -76,7 +77,7 @@ function LayoutWithSidebar({ children }: { children: React.ReactNode }) {
 }
 
 export default function Home() {
-  const { currentView, isAuthenticated, user, accessToken, navigate } = useAppStore()
+  const { currentView, isAuthenticated, user, accessToken, navigate, setSocketConnected } = useAppStore()
   const [initialized, setInitialized] = useState(false)
 
   // On mount, navigate based on auth state (persisted by Zustand)
@@ -89,6 +90,8 @@ export default function Home() {
         navigate('welcome')
       }
       setInitialized(true)
+      // Mark as connected since we're using BroadcastChannel + polling
+      setSocketConnected(true)
     }, 2500)
 
     return () => clearTimeout(timer)
@@ -102,17 +105,20 @@ export default function Home() {
   }, [accessToken])
 
   return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={currentView}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.2 }}
-        className="h-screen overflow-hidden"
-      >
-        <ViewRouter view={currentView} />
-      </motion.div>
-    </AnimatePresence>
+    <>
+      <ThemeInitializer />
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={currentView}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          className="h-screen overflow-hidden"
+        >
+          <ViewRouter view={currentView} />
+        </motion.div>
+      </AnimatePresence>
+    </>
   )
 }

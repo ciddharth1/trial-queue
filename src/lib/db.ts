@@ -4,9 +4,9 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
-// Force new PrismaClient to pick up current DB permissions
-// Disconnect old cached client if it exists
-if (globalForPrisma.prisma) {
+// Only force-disconnect in development mode to handle hot reload
+// In production, reuse the cached client
+if (process.env.NODE_ENV !== 'production' && globalForPrisma.prisma) {
   try {
     globalForPrisma.prisma.$disconnect()
   } catch {

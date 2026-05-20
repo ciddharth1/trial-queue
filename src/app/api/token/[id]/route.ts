@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { db } from '@/lib/db'
 import { authenticateRequest, requireAdmin } from '@/lib/auth'
 import { successResponse, errorResponse } from '@/lib/api-response'
+import { recalculatePositions } from '@/lib/queue-utils'
 
 // GET - Get token details
 export async function GET(
@@ -177,6 +178,9 @@ export async function PATCH(
           where: { id: existingToken.queueId },
           data: { currentLength: newLength },
         })
+
+        // Recalculate positions for remaining waiting members
+        await recalculatePositions(existingToken.queueId)
       }
     }
 

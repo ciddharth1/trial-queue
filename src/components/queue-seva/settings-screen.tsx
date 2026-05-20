@@ -1,28 +1,13 @@
 'use client'
 
-import { useState } from 'react'
-import { motion } from 'framer-motion'
-import { Moon, Sun, Bell, Shield, Globe, Volume2, Vibrate, Eye } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
 import { Header } from './header'
 import { Switch } from '@/components/ui/switch'
+import { motion } from 'framer-motion'
+import { Moon, Sun, Bell, Shield, Globe, Volume2, Vibrate, Eye } from 'lucide-react'
 
 export function SettingsScreen() {
-  const { theme, toggleTheme } = useAppStore()
-  const [settings, setSettings] = useState({
-    pushNotifications: true,
-    tokenAlerts: true,
-    queueUpdates: true,
-    soundAlerts: true,
-    vibration: true,
-    liveTracking: true,
-    autoRefresh: true,
-    compactView: false,
-  })
-
-  const toggleSetting = (key: keyof typeof settings) => {
-    setSettings((prev) => ({ ...prev, [key]: !prev[key] }))
-  }
+  const { theme, toggleTheme, settings, updateSetting } = useAppStore()
 
   const settingGroups = [
     {
@@ -101,7 +86,7 @@ export function SettingsScreen() {
                     </div>
                     <Switch
                       checked={settings[item.key]}
-                      onCheckedChange={() => toggleSetting(item.key)}
+                      onCheckedChange={(checked) => updateSetting(item.key, checked)}
                       className="data-[state=checked]:bg-[#4F46E5]"
                     />
                   </div>

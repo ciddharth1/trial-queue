@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import {
   ListOrdered,
@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { useAppStore, type AppQueue, type AppToken } from '@/lib/store'
 import { apiClient } from '@/lib/api-client'
+import { emitRefresh } from '@/hooks/use-realtime'
 import { Header } from './header'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -189,26 +190,7 @@ export function UserDashboard() {
   const { user, navigate, setSelectedQueue, setQueues, queues, userTokens, setUserTokens, refreshCounter } = useAppStore()
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    loadData()
-  }, [])
-
-  // Refresh when refreshCounter changes (triggered by admin actions or other screens)
-  useEffect(() => {
-    if (refreshCounter > 0) {
-      loadData()
-    }
-  }, [refreshCounter])
-
-  // Auto-poll every 10 seconds for real-time updates
-  useEffect(() => {
-    const interval = setInterval(() => {
-      loadData()
-    }, 10000)
-    return () => clearInterval(interval)
-  }, [])
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true)
     try {
       const [queuesRes, tokensRes] = await Promise.all([
@@ -227,7 +209,26 @@ export function UserDashboard() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [user, setQueues, setUserTokens])
+
+  useEffect(() => {
+    loadData()
+  }, [])
+
+  // Refresh when refreshCounter changes (triggered by admin actions or other screens)
+  useEffect(() => {
+    if (refreshCounter > 0) {
+      loadData()
+    }
+  }, [refreshCounter])
+
+  // Faster auto-poll every 5 seconds for real-time updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadData()
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [])
 
   const handleJoinQueue = (queue: AppQueue) => {
     setSelectedQueue(queue)
@@ -245,7 +246,9 @@ export function UserDashboard() {
       if (result.success) {
         toast.success('You have left the queue')
         setUserTokens(useAppStore.getState().userTokens.filter(t => t.id !== token.id))
-        useAppStore.getState().triggerRefresh()
+        // Broadcast the change to all tabs (admin will see it)
+        emitRefresh('queue-update')
+        emitRefresh('token-update')
         loadData()
       } else {
         toast.error(result.error || 'Failed to leave queue')

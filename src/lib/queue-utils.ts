@@ -1,4 +1,5 @@
 import { db } from '@/lib/db'
+import { PrismaClient } from '@prisma/client'
 
 /**
  * Generate a token number string like "A-001"
@@ -20,10 +21,12 @@ export function estimateWaitTime(avgServiceTime: number, position: number): numb
 
 /**
  * Get the next sequence number atomically for a queue.
- * Finds the max sequenceNum for the queue and increments.
+ * IMPORTANT: This should be called WITHIN a transaction for race-condition safety.
+ * Uses the transaction client (tx) when provided, otherwise falls back to db.
  */
-export async function getNextSequence(queueId: string): Promise<number> {
-  const lastToken = await db.token.findFirst({
+export async function getNextSequence(queueId: string, tx?: Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>): Promise<number> {
+  const client = tx || db
+  const lastToken = await client.token.findFirst({
     where: { queueId },
     orderBy: { sequenceNum: 'desc' },
     select: { sequenceNum: true },

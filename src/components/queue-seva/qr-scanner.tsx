@@ -1,35 +1,59 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { QrCode, Camera, ScanLine, CheckCircle2, AlertCircle, ArrowRight } from 'lucide-react'
-import { useAppStore } from '@/lib/store'
+import { useAppStore, type AppQueue } from '@/lib/store'
 import { apiClient } from '@/lib/api-client'
+import { emitRefresh } from '@/hooks/use-realtime'
 import { Header } from './header'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { toast } from 'sonner'
 
 export function QRScannerScreen() {
-  const { navigate, user, setSelectedQueue, setSelectedToken, setUserTokens, userTokens, triggerRefresh } = useAppStore()
+  const { navigate, user, setSelectedQueue, setSelectedToken, setUserTokens, userTokens, queues } = useAppStore()
   const [scanning, setScanning] = useState(false)
   const [manualCode, setManualCode] = useState('')
   const [scannedResult, setScannedResult] = useState<{ queueId: string; queueName: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [joining, setJoining] = useState(false)
+  const [availableQueues, setAvailableQueues] = useState<AppQueue[]>([])
+
+  // Load available queues for demo scanning
+  useEffect(() => {
+    const loadQueues = async () => {
+      try {
+        const result = await apiClient.getQueues({ status: 'ACTIVE' })
+        if (result.success && result.data) {
+          const items = result.data.items || []
+          setAvailableQueues(items)
+        }
+      } catch (error) {
+        console.error('Failed to load queues for scanner:', error)
+      }
+    }
+    loadQueues()
+  }, [])
 
   const handleScan = useCallback(() => {
     setScanning(true)
     setError(null)
-    // Simulate QR scan result
+    // Simulate QR scan result by picking the first available active queue
     setTimeout(() => {
       setScanning(false)
-      // Demo: simulate finding a queue
-      setScannedResult({
-        queueId: 'demo-queue-001',
-        queueName: 'General Service Queue',
-      })
+      if (availableQueues.length > 0) {
+        // Pick a random active queue
+        const randomQueue = availableQueues[Math.floor(Math.random() * availableQueues.length)]
+        setScannedResult({
+          queueId: randomQueue.id,
+          queueName: randomQueue.name,
+        })
+      } else {
+        setError('No active queues available to scan. Please try again later.')
+      }
     }, 2000)
-  }, [])
+  }, [availableQueues])
 
   const handleManualJoin = async () => {
     if (!manualCode.trim()) {
@@ -60,7 +84,10 @@ export function QRScannerScreen() {
         token.queueName = scannedResult.queueName
         setSelectedToken(token)
         setUserTokens([...userTokens, token])
-        triggerRefresh()
+        // Broadcast to all tabs
+        emitRefresh('queue-update')
+        emitRefresh('token-update')
+        toast.success(`You joined "${scannedResult.queueName}"! Token: ${token.tokenNumber}`)
         navigate('token-display')
       } else {
         setError(result.error || 'Failed to join queue')
@@ -150,7 +177,7 @@ export function QRScannerScreen() {
           >
             <div className="flex items-center gap-4">
               <div className="h-px flex-1 bg-slate-800" />
-              <span className="text-xs text-slate-600">or enter code manually</span>
+              <span className="text-xs text-slate-600">or enter queue code manually</span>
               <div className="h-px flex-1 bg-slate-800" />
             </div>
 
@@ -184,11 +211,44 @@ export function QRScannerScreen() {
             </div>
           </motion.div>
 
-          {/* Recent scans */}
+          {/* Available queues for quick access */}
+          {availableQueues.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="space-y-2"
+            >
+              <h3 className="text-xs font-medium text-slate-500">Quick Join</h3>
+              <div className="space-y-2">
+                {availableQueues.slice(0, 3).map((queue) => (
+                  <button
+                    key={queue.id}
+                    onClick={() => {
+                      setSelectedQueue(queue)
+                      navigate('queue-detail')
+                    }}
+                    className="flex w-full items-center gap-3 rounded-xl border border-slate-800/30 bg-slate-900/20 p-3 text-left transition-colors hover:bg-slate-800/30"
+                  >
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#4F46E5]/10 text-xs font-bold text-[#4F46E5]">
+                      {queue.prefix}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs font-medium text-slate-300">{queue.name}</p>
+                      <p className="text-[10px] text-slate-500">{queue.currentLength} in queue</p>
+                    </div>
+                    <ArrowRight className="h-3 w-3 text-slate-600" />
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Recent scans placeholder */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
+            transition={{ delay: 0.4 }}
             className="space-y-2"
           >
             <h3 className="text-xs font-medium text-slate-500">Recent Scans</h3>

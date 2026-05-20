@@ -79,6 +79,29 @@ export interface AppNotification {
   createdAt: string
 }
 
+// ─── SETTINGS TYPE ──────────────────────────────────────
+export interface AppSettings {
+  pushNotifications: boolean
+  tokenAlerts: boolean
+  queueUpdates: boolean
+  soundAlerts: boolean
+  vibration: boolean
+  liveTracking: boolean
+  autoRefresh: boolean
+  compactView: boolean
+}
+
+const defaultSettings: AppSettings = {
+  pushNotifications: true,
+  tokenAlerts: true,
+  queueUpdates: true,
+  soundAlerts: true,
+  vibration: true,
+  liveTracking: true,
+  autoRefresh: true,
+  compactView: false,
+}
+
 // ─── STORE STATE ────────────────────────────────────────
 interface AppState {
   // Navigation
@@ -130,6 +153,11 @@ interface AppState {
   // Theme
   theme: 'dark' | 'light'
   toggleTheme: () => void
+
+  // Settings (persisted)
+  settings: AppSettings
+  setSettings: (settings: AppSettings) => void
+  updateSetting: (key: keyof AppSettings, value: boolean) => void
 
   // Sidebar
   sidebarOpen: boolean
@@ -223,7 +251,21 @@ export const useAppStore = create<AppState>()(
 
       // Theme
       theme: 'dark',
-      toggleTheme: () => set((state) => ({ theme: state.theme === 'dark' ? 'light' : 'dark' })),
+      toggleTheme: () => set((state) => {
+        const newTheme = state.theme === 'dark' ? 'light' : 'dark'
+        // Update the HTML class for theme reactivity
+        if (typeof document !== 'undefined') {
+          document.documentElement.className = newTheme
+        }
+        return { theme: newTheme }
+      }),
+
+      // Settings
+      settings: defaultSettings,
+      setSettings: (settings) => set({ settings }),
+      updateSetting: (key, value) => set((state) => ({
+        settings: { ...state.settings, [key]: value },
+      })),
 
       // Sidebar
       sidebarOpen: false,
@@ -236,13 +278,14 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: 'queueSevaAuth',
-      // Only persist auth-related fields
+      // Persist auth-related fields AND settings AND theme
       partialize: (state) => ({
         user: state.user,
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,
         isAuthenticated: state.isAuthenticated,
         theme: state.theme,
+        settings: state.settings,
       }),
     }
   )

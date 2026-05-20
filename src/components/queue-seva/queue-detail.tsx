@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import {
   ArrowLeft,
@@ -19,10 +19,12 @@ import {
 } from 'lucide-react'
 import { useAppStore, type AppQueue, type AppToken } from '@/lib/store'
 import { apiClient } from '@/lib/api-client'
+import { emitRefresh } from '@/hooks/use-realtime'
 import { Header } from './header'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
+import { toast } from 'sonner'
 
 export function QueueDetailScreen() {
   const { selectedQueue, navigate, goBack, user, setUserTokens, setSelectedToken, refreshCounter } = useAppStore()
@@ -31,20 +33,7 @@ export function QueueDetailScreen() {
   const [loading, setLoading] = useState(false)
   const [joining, setJoining] = useState(false)
 
-  useEffect(() => {
-    if (selectedQueue?.id) {
-      loadQueueDetail()
-    }
-  }, [selectedQueue?.id])
-
-  // Refresh when refreshCounter changes (other users/admins made changes)
-  useEffect(() => {
-    if (refreshCounter > 0 && selectedQueue?.id) {
-      loadQueueDetail()
-    }
-  }, [refreshCounter])
-
-  const loadQueueDetail = async () => {
+  const loadQueueDetail = useCallback(async () => {
     if (!selectedQueue?.id) return
     setLoading(true)
     try {
@@ -62,7 +51,29 @@ export function QueueDetailScreen() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [selectedQueue?.id])
+
+  useEffect(() => {
+    if (selectedQueue?.id) {
+      loadQueueDetail()
+    }
+  }, [selectedQueue?.id])
+
+  // Refresh when refreshCounter changes (other users/admins made changes)
+  useEffect(() => {
+    if (refreshCounter > 0 && selectedQueue?.id) {
+      loadQueueDetail()
+    }
+  }, [refreshCounter])
+
+  // Faster polling for real-time updates
+  useEffect(() => {
+    if (!selectedQueue?.id) return
+    const interval = setInterval(() => {
+      loadQueueDetail()
+    }, 4000)
+    return () => clearInterval(interval)
+  }, [selectedQueue?.id])
 
   const handleJoinQueue = async () => {
     if (!queue || !user) return
@@ -76,12 +87,17 @@ export function QueueDetailScreen() {
         setUserTokens([...useAppStore.getState().userTokens, token])
         // Refresh queue detail to show updated currentLength
         await loadQueueDetail()
-        // Trigger global refresh so admin and other screens update
-        useAppStore.getState().triggerRefresh()
+        // Broadcast the change to ALL tabs (admin will see it immediately)
+        emitRefresh('queue-update')
+        emitRefresh('token-update')
+        toast.success(`You joined "${queue.name}"! Token: ${token.tokenNumber}`)
         navigate('token-display')
+      } else {
+        toast.error((result as any).error || 'Failed to join queue')
       }
     } catch (error) {
       console.error('Failed to join queue:', error)
+      toast.error('Failed to join queue')
     } finally {
       setJoining(false)
     }

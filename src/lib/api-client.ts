@@ -217,7 +217,7 @@ class ApiClient {
   // ─── NOTIFICATIONS ──────────────────────────────────
   async getNotifications(params?: { unreadOnly?: boolean; page?: number }) {
     const query = new URLSearchParams()
-    if (params?.unreadOnly) query.set('unreadOnly', 'true')
+    if (params?.unreadOnly) query.set('isRead', 'false')
     if (params?.page) query.set('page', String(params.page))
     const qs = query.toString()
     return this.request<{

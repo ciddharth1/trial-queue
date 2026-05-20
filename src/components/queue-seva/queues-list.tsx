@@ -1,14 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { Search, ListOrdered, Users, Clock, CheckCircle2, Filter } from 'lucide-react'
+import { Search, ListOrdered, Users, Clock, CheckCircle2 } from 'lucide-react'
 import { useAppStore, type AppQueue } from '@/lib/store'
 import { apiClient } from '@/lib/api-client'
 import { Header } from './header'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 
 export function QueuesListScreen() {
   const { navigate, setSelectedQueue, queues, setQueues, refreshCounter } = useAppStore()
@@ -16,18 +15,7 @@ export function QueuesListScreen() {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    loadQueues()
-  }, [statusFilter])
-
-  // Refresh when refreshCounter changes
-  useEffect(() => {
-    if (refreshCounter > 0) {
-      loadQueues()
-    }
-  }, [refreshCounter])
-
-  const loadQueues = async () => {
+  const loadQueues = useCallback(async () => {
     setLoading(true)
     try {
       const result = await apiClient.getQueues(
@@ -41,7 +29,26 @@ export function QueuesListScreen() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [statusFilter, setQueues])
+
+  useEffect(() => {
+    loadQueues()
+  }, [statusFilter])
+
+  // Refresh when refreshCounter changes
+  useEffect(() => {
+    if (refreshCounter > 0) {
+      loadQueues()
+    }
+  }, [refreshCounter])
+
+  // Auto-poll every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadQueues()
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [statusFilter])
 
   const filteredQueues = queues.filter(
     (q) =>

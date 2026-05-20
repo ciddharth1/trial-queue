@@ -44,6 +44,14 @@ export function NotificationsScreen() {
     }
   }, [refreshCounter])
 
+  // Auto-poll every 5 seconds for real-time notification updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadNotifications()
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [])
+
   const loadNotifications = async () => {
     if (!user) return
     setLoading(true)

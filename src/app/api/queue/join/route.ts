@@ -51,23 +51,23 @@ export async function POST(request: NextRequest) {
       return errorResponse('You are already in this queue', 409)
     }
 
-    // Get next position
-    const currentWaiting = await db.queueMember.count({
-      where: { queueId, status: 'WAITING' },
-    })
-    const position = currentWaiting + 1
-
-    // Get next sequence number
-    const sequenceNum = await getNextSequence(queueId)
-
-    // Generate token number
-    const tokenNumber = generateTokenNumber(queue.prefix, sequenceNum)
-
-    // Calculate estimated wait time
-    const estimatedWait = estimateWaitTime(queue.avgServiceTime, position)
-
-    // Use transaction for atomic operations
+    // Use transaction for ALL atomic operations (including sequence generation)
     const result = await db.$transaction(async (tx) => {
+      // Get current waiting count INSIDE transaction for accurate position
+      const currentWaiting = await tx.queueMember.count({
+        where: { queueId, status: 'WAITING' },
+      })
+      const position = currentWaiting + 1
+
+      // Get next sequence number INSIDE transaction to prevent race conditions
+      const sequenceNum = await getNextSequence(queueId, tx)
+
+      // Generate token number
+      const tokenNumber = generateTokenNumber(queue.prefix, sequenceNum)
+
+      // Calculate estimated wait time
+      const estimatedWait = estimateWaitTime(queue.avgServiceTime, position)
+
       // Create queue member
       const member = await tx.queueMember.create({
         data: {
@@ -90,13 +90,16 @@ export async function POST(request: NextRequest) {
         },
       })
 
-      // Update queue length
-      await tx.queue.update({
-        where: { id: queueId },
-        data: { currentLength: queue.currentLength + 1 },
-      })
+      // Update queue length - re-read current queue state inside transaction
+      const currentQueue = await tx.queue.findUnique({ where: { id: queueId } })
+      if (currentQueue) {
+        await tx.queue.update({
+          where: { id: queueId },
+          data: { currentLength: currentQueue.currentLength + 1 },
+        })
+      }
 
-      return { member, token }
+      return { member, token, position, estimatedWait }
     })
 
     // Create notification
@@ -104,13 +107,13 @@ export async function POST(request: NextRequest) {
       data: {
         userId,
         title: 'Joined Queue',
-        message: `You have joined "${queue.name}". Your token is ${tokenNumber}. Position: ${position}. Estimated wait: ${Math.ceil(estimatedWait / 60)} minutes.`,
+        message: `You have joined "${queue.name}". Your token is ${result.token.tokenNumber}. Position: ${result.position}. Estimated wait: ${Math.ceil(result.estimatedWait / 60)} minutes.`,
         type: 'QUEUE_UPDATE',
         data: JSON.stringify({
           queueId,
-          tokenNumber,
-          position,
-          estimatedWait,
+          tokenNumber: result.token.tokenNumber,
+          position: result.position,
+          estimatedWait: result.estimatedWait,
         }),
       },
     })
@@ -118,7 +121,7 @@ export async function POST(request: NextRequest) {
     return successResponse(
       {
         ...result.token,
-        position,
+        position: result.position,
         queueName: queue.name,
       },
       'Successfully joined queue',

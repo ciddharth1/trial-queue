@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus,
@@ -8,7 +8,6 @@ import {
   Play,
   Pause,
   Square,
-  MoreVertical,
   Users,
   Clock,
   CheckCircle2,
@@ -16,9 +15,11 @@ import {
   Trash2,
   PhoneIncoming,
   CheckCircle,
+  RefreshCw,
 } from 'lucide-react'
 import { useAppStore, type AppQueue } from '@/lib/store'
 import { apiClient } from '@/lib/api-client'
+import { emitRefresh } from '@/hooks/use-realtime'
 import { Header } from './header'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -35,19 +36,7 @@ export function AdminQueuesScreen() {
   const [loading, setLoading] = useState(true)
   const [serviceCenterId, setServiceCenterId] = useState<string | null>(null)
 
-  useEffect(() => {
-    loadServiceCenter()
-    loadQueues()
-  }, [])
-
-  // Refresh when refreshCounter changes (triggered by user/admin actions)
-  useEffect(() => {
-    if (refreshCounter > 0) {
-      loadQueues()
-    }
-  }, [refreshCounter])
-
-  const loadServiceCenter = async () => {
+  const loadServiceCenter = useCallback(async () => {
     try {
       const result = await apiClient.getServiceCenters()
       if (result.success && result.data) {
@@ -59,9 +48,9 @@ export function AdminQueuesScreen() {
     } catch (error) {
       console.error('Failed to load service centers:', error)
     }
-  }
+  }, [])
 
-  const loadQueues = async () => {
+  const loadQueues = useCallback(async () => {
     setLoading(true)
     try {
       const result = await apiClient.getQueues()
@@ -76,7 +65,27 @@ export function AdminQueuesScreen() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [setQueues])
+
+  useEffect(() => {
+    loadServiceCenter()
+    loadQueues()
+  }, [])
+
+  // Refresh when refreshCounter changes (triggered by user/admin actions)
+  useEffect(() => {
+    if (refreshCounter > 0) {
+      loadQueues()
+    }
+  }, [refreshCounter])
+
+  // Faster polling for real-time updates (4 seconds)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadQueues()
+    }, 4000)
+    return () => clearInterval(interval)
+  }, [])
 
   const filteredQueues = queuesList.filter(
     (q) => q.name.toLowerCase().includes(searchQuery.toLowerCase()) || q.prefix.toLowerCase().includes(searchQuery.toLowerCase())
@@ -102,7 +111,8 @@ export function AdminQueuesScreen() {
         setNewQueue({ name: '', prefix: '', maxCapacity: 100, description: '' })
         toast.success('Queue created successfully!')
         loadQueues()
-        useAppStore.getState().triggerRefresh()
+        // Broadcast the change to all tabs
+        emitRefresh('queue-update')
       } else {
         toast.error(result.error || 'Failed to create queue')
       }
@@ -120,7 +130,8 @@ export function AdminQueuesScreen() {
       if (result.success) {
         toast.success(`Queue ${newStatus === 'ACTIVE' ? 'resumed' : newStatus === 'PAUSED' ? 'paused' : 'closed'} successfully!`)
         loadQueues()
-        useAppStore.getState().triggerRefresh()
+        // Broadcast the change to all tabs
+        emitRefresh('queue-update')
       } else {
         toast.error(result.error || 'Failed to update queue')
       }
@@ -147,7 +158,9 @@ export function AdminQueuesScreen() {
         if (result.success) {
           toast.success(`Token ${nextToken.tokenNumber} has been called!`)
           loadQueues()
-          useAppStore.getState().triggerRefresh()
+          // Broadcast the change to all tabs (both admin and user)
+          emitRefresh('token-update')
+          emitRefresh('queue-update')
         } else {
           toast.error(result.error || 'Failed to call next token')
         }
@@ -174,7 +187,9 @@ export function AdminQueuesScreen() {
         if (result.success) {
           toast.success(`Token ${activeToken.tokenNumber} marked as completed!`)
           loadQueues()
-          useAppStore.getState().triggerRefresh()
+          // Broadcast the change to all tabs
+          emitRefresh('token-update')
+          emitRefresh('queue-update')
         } else {
           toast.error(result.error || 'Failed to complete token')
         }
@@ -205,6 +220,16 @@ export function AdminQueuesScreen() {
 
       <main className="flex-1 overflow-y-auto p-4 sm:p-6">
         <div className="mx-auto max-w-4xl space-y-4">
+          {/* Live indicator */}
+          <div className="flex items-center gap-2 text-[10px] text-slate-500">
+            <motion.div
+              className="h-1.5 w-1.5 rounded-full bg-emerald-400"
+              animate={{ opacity: [1, 0.4, 1] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            />
+            <span>Live · Auto-refreshing every 4s</span>
+          </div>
+
           {/* Search & Create */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -350,7 +375,7 @@ export function AdminQueuesScreen() {
                         </span>
                         <span className="flex items-center gap-1 text-emerald-400">
                           <CheckCircle2 className="h-3 w-3" />
-                          {queue.waitingCount ?? 0} waiting
+                          {queue.waitingCount ?? queue.currentLength ?? 0} waiting
                         </span>
                       </div>
                     </div>

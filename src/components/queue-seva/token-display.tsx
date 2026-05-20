@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { Clock, ListOrdered, ArrowRight, CheckCircle2, Bell, Timer, LogOut, Loader2 } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
 import { apiClient } from '@/lib/api-client'
+import { emitRefresh } from '@/hooks/use-realtime'
 import { Header } from './header'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
@@ -34,8 +35,9 @@ export function TokenDisplayScreen() {
         toast.success('You have left the queue')
         // Remove this token from user tokens
         setUserTokens(userTokens.filter(t => t.id !== token.id))
-        // Trigger global refresh so admin and other screens update
-        triggerRefresh()
+        // Broadcast the change to ALL tabs (admin will see it immediately)
+        emitRefresh('queue-update')
+        emitRefresh('token-update')
         navigate('dashboard')
       } else {
         toast.error(result.error || 'Failed to leave queue')

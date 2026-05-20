@@ -1,16 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Users,
   Clock,
   ArrowRight,
   Radio,
-  ChevronUp,
-  ChevronDown,
   CheckCircle2,
-  Minus,
 } from 'lucide-react'
 import { useAppStore, type AppToken } from '@/lib/store'
 import { apiClient } from '@/lib/api-client'
@@ -25,52 +22,138 @@ function formatWaitTime(seconds: number | null): string {
   return `${Math.floor(mins / 60)}h ${mins % 60}m`
 }
 
-// Simulated live positions for demo
+// Real live position from API data
 interface LivePosition {
   position: number
   tokenNumber: string
-  status: string
+  status: 'you' | 'serving' | 'waiting' | 'completed'
   estimatedWait: number
-}
-
-function generateLivePositions(tokenPosition: number, totalInQueue: number): LivePosition[] {
-  const positions: LivePosition[] = []
-  for (let i = 1; i <= Math.min(totalInQueue, 10); i++) {
-    const status = i < tokenPosition ? 'serving' : i === tokenPosition ? 'you' : 'waiting'
-    positions.push({
-      position: i,
-      tokenNumber: `A-${String(i).padStart(3, '0')}`,
-      status,
-      estimatedWait: (i - 1) * 5,
-    })
-  }
-  return positions
+  tokenId: string
+  userName: string
 }
 
 export function LiveTrackerScreen() {
   const { userTokens, selectedToken, navigate, refreshCounter } = useAppStore()
-  const [simulatedPosition, setSimulatedPosition] = useState<number | null>(null)
+  const [livePositions, setLivePositions] = useState<LivePosition[]>([])
+  const [loading, setLoading] = useState(true)
+  const [currentPosition, setCurrentPosition] = useState(0)
+  const [totalInQueue, setTotalInQueue] = useState(0)
 
   const activeToken: AppToken | null = selectedToken || userTokens.find((t) => ['WAITING', 'CALLED'].includes(t.status)) || null
-  const basePosition = activeToken?.position ?? activeToken?.sequenceNum ?? 0
-  const currentPosition = simulatedPosition ?? basePosition
-  const totalInQueue = Math.max(basePosition + 5, 15)
 
-  // Simulate position updates
+  const loadRealData = useCallback(async () => {
+    if (!activeToken) {
+      setLoading(false)
+      return
+    }
+
+    try {
+      // Fetch real tokens for this queue
+      const tokensRes = await apiClient.getTokens({ queueId: activeToken.queueId, pageSize: 50 })
+      if (tokensRes.success && tokensRes.data) {
+        const items = (tokensRes.data as any).items || tokensRes.data
+        const allTokens: any[] = Array.isArray(items) ? items : []
+
+        // Build live positions from real data
+        const positions: LivePosition[] = []
+        let myPosition = 0
+        let waitCount = 0
+
+        for (const token of allTokens) {
+          if (token.status === 'COMPLETED' || token.status === 'CANCELLED' || token.status === 'EXPIRED') continue
+
+          waitCount++
+          const isMe = token.id === activeToken.id
+          const status: LivePosition['status'] =
+            isMe ? 'you' :
+            token.status === 'SERVING' ? 'serving' :
+            token.status === 'CALLED' ? 'serving' :
+            'waiting'
+
+          if (status === 'waiting' && !isMe) {
+            waitCount // counting position
+          }
+
+          if (isMe) {
+            // Calculate my real position by counting WAITING tokens with lower sequence numbers
+            myPosition = allTokens.filter(
+              (t: any) => t.status === 'WAITING' && t.sequenceNum <= token.sequenceNum
+            ).length
+          }
+
+          positions.push({
+            position: positions.length + 1,
+            tokenNumber: token.tokenNumber,
+            status,
+            estimatedWait: token.estimatedWait || 0,
+            tokenId: token.id,
+            userName: token.user?.name || 'User',
+          })
+        }
+
+        setLivePositions(positions)
+        setCurrentPosition(myPosition || activeToken.position || activeToken.sequenceNum || 0)
+        setTotalInQueue(positions.filter(p => p.status !== 'completed').length)
+      }
+    } catch (error) {
+      console.error('Failed to load live data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [activeToken])
+
   useEffect(() => {
-    if (!activeToken || activeToken.status !== 'WAITING') return
+    loadRealData()
+  }, [])
+
+  // Refresh when refreshCounter changes
+  useEffect(() => {
+    if (refreshCounter > 0) {
+      loadRealData()
+    }
+  }, [refreshCounter])
+
+  // Faster polling for live position updates (3 seconds)
+  useEffect(() => {
+    if (!activeToken) return
     const interval = setInterval(() => {
-      setSimulatedPosition((prev) => {
-        const current = prev ?? basePosition
-        return Math.max(1, current - 1)
-      })
-    }, 8000)
+      loadRealData()
+    }, 3000)
     return () => clearInterval(interval)
   }, [activeToken])
 
-  const livePositions = activeToken ? generateLivePositions(currentPosition, totalInQueue) : []
-  const progressPercent = activeToken
-    ? Math.round((((basePosition - currentPosition + 1) / basePosition) * 100))
+  // Also refresh the specific token to get updated position
+  const [tokenDetail, setTokenDetail] = useState<any>(null)
+  useEffect(() => {
+    if (!activeToken) return
+    const interval = setInterval(async () => {
+      try {
+        const result = await apiClient.getToken(activeToken.id)
+        if (result.success && result.data) {
+          setTokenDetail(result.data)
+          if ((result.data as any).currentPosition) {
+            setCurrentPosition((result.data as any).currentPosition)
+          }
+          // If token status changed to CALLED, show notification
+          if ((result.data as any).status === 'CALLED' && activeToken.status === 'WAITING') {
+            // Update the selected token
+            useAppStore.getState().setSelectedToken({
+              ...activeToken,
+              status: 'CALLED',
+              calledAt: (result.data as any).calledAt,
+            })
+          }
+        }
+      } catch (error) {
+        console.error('Failed to refresh token:', error)
+      }
+    }, 3000)
+    return () => clearInterval(interval)
+  }, [activeToken])
+
+  const basePosition = activeToken?.position ?? activeToken?.sequenceNum ?? 0
+  const progressPercent = basePosition > 0
+    ? Math.round(((basePosition - currentPosition + 1) / basePosition) * 100)
     : 0
 
   return (
@@ -118,7 +201,7 @@ export function LiveTrackerScreen() {
                   <div className="mt-4 flex items-center justify-center gap-4 text-sm">
                     <div className="flex items-center gap-1.5 text-[#4F46E5]">
                       <Clock className="h-4 w-4" />
-                      <span className="font-semibold">{formatWaitTime(currentPosition * 300)}</span>
+                      <span className="font-semibold">{formatWaitTime(activeToken.estimatedWait || currentPosition * 300)}</span>
                       <span className="text-slate-500">wait</span>
                     </div>
                   </div>
@@ -159,9 +242,9 @@ export function LiveTrackerScreen() {
                 <h3 className="mb-3 text-sm font-semibold text-white">Queue Positions</h3>
                 <div className="space-y-2">
                   <AnimatePresence>
-                    {livePositions.map((pos) => (
+                    {livePositions.slice(0, 15).map((pos) => (
                       <motion.div
-                        key={pos.position}
+                        key={pos.tokenId}
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: 20 }}
@@ -206,7 +289,7 @@ export function LiveTrackerScreen() {
                                 : 'border-slate-800/50 bg-slate-900/30 text-slate-500'
                           }`}
                         >
-                          {pos.status === 'serving' ? 'Serving' : pos.status === 'you' ? 'Your Turn' : `~${pos.estimatedWait}m`}
+                          {pos.status === 'serving' ? 'Serving' : pos.status === 'you' ? 'Your Turn' : `~${Math.round(pos.estimatedWait / 60)}m`}
                         </Badge>
                       </motion.div>
                     ))}

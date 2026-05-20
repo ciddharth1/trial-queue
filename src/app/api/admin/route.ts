@@ -51,18 +51,14 @@ export async function GET(request: NextRequest) {
     ])
 
     // Calculate average wait time for today's served tokens
+    // Only count tokens that have both calledAt and servedAt for accurate measurement
     let avgWaitTime = 0
-    if (todayTokens.length > 0) {
-      const totalWaitTime = todayTokens.reduce((sum, token) => {
-        if (token.calledAt && token.servedAt) {
-          return sum + (new Date(token.servedAt).getTime() - new Date(token.calledAt).getTime()) / 1000
-        }
-        if (token.calledAt) {
-          return sum + (new Date(token.calledAt).getTime() - today.getTime()) / 1000
-        }
-        return sum
+    const validWaitTokens = todayTokens.filter(t => t.calledAt && t.servedAt)
+    if (validWaitTokens.length > 0) {
+      const totalWaitTime = validWaitTokens.reduce((sum, token) => {
+        return sum + (new Date(token.servedAt!).getTime() - new Date(token.calledAt!).getTime()) / 1000
       }, 0)
-      avgWaitTime = Math.round(totalWaitTime / todayTokens.length)
+      avgWaitTime = Math.round(totalWaitTime / validWaitTokens.length)
     }
 
     // Get recent queues
