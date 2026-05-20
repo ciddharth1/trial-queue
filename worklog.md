@@ -1,24 +1,27 @@
 ---
 Task ID: 1
 Agent: Main Agent
-Task: Fix all bugs and run Queue Seva SaaS platform
+Task: Fix all bugs/errors in Queue Seva SaaS platform, fix real-time sync, and run the website
 
 Work Log:
-- Explored entire project structure: Next.js 16 + React 19 SPA with Socket.io real-time, Prisma/SQLite, Zustand state management
-- Analyzed all source files for bugs and issues
-- Fixed Bug 1: db.ts force-disconnected Prisma on every hot reload causing 'Client is not connected' errors - removed the disconnect logic
-- Fixed Bug 2: Socket.io client manager - added pending emit queue so events are sent even if socket temporarily disconnects, ensuring real-time sync reliability
-- Fixed Bug 3: use-realtime.ts - removed `require()` anti-pattern that breaks in production builds, replaced with direct `useAppStore.getState()` import
-- Fixed Bug 4: admin-dashboard.tsx - `loadChartData` was called in useEffect before being defined with useCallback, causing reference error - reordered function definitions
-- Fixed Bug 5: user-dashboard.tsx - API response data extraction was fragile, improved with proper type checking
-- Seeded database with demo data (admin@demo.com/password, user@demo.com/password, 5 queues, tokens, notifications, analytics)
-- Started Socket.io service on port 3003 (bun runtime)
+- Explored entire project structure (Next.js 16 + Socket.io + Prisma + SQLite + Zustand)
+- Identified real-time sync issue: API routes did not emit Socket.io events server-side
+- Created `/broadcast` HTTP endpoint on socket service (port 3003) for server-side event emission
+- Created `src/lib/socket-broadcast.ts` - server-side helper to trigger socket events from API routes
+- Updated `/api/queue/join/route.ts` to broadcast `token:created` and `queue:member_joined` events
+- Updated `/api/queue/leave/route.ts` to broadcast `queue:member_left`, `queue:updated`, and `token:expired` events
+- Updated `/api/token/[id]/route.ts` to broadcast token status change events (called/serving/completed/expired)
+- Updated `/api/queue/[id]/route.ts` to broadcast queue update events on status changes
+- Added `SOCKET_SERVICE_URL` to `.env` for server-side socket service communication
+- Fixed `loadQueueDetail` dependency array in `queue-detail.tsx`
+- Verified database has seed data (4 users, 10 queues, 35 tokens, 2 service centers)
+- Built Next.js successfully with no errors
+- Started Socket.io service on port 3003
 - Started Next.js dev server on port 3000
-- Verified real-time sync: user joins queue → admin stats update immediately (18 → 19 tokens today)
-- Verified all API endpoints work correctly
+- Tested full flow: login → get queues → join queue → admin stats update
 
 Stage Summary:
-- Both services running: Next.js on :3000, Socket.io on :3003
-- All bugs fixed and code improved
-- Real-time sync verified: user takes token → admin sees update immediately via Socket.io + BroadcastChannel + polling
-- Demo credentials: admin@demo.com / password, user@demo.com / password
+- Both services running: Next.js (port 3000) + Socket.io (port 3003)
+- Server-side broadcast endpoint working (POST /broadcast)
+- Real-time sync now works via 3 layers: (1) Server-side HTTP→Socket broadcast from API routes, (2) Client-side Socket.io emission, (3) Polling fallback
+- Demo credentials: admin@demo.com/password (admin) and user@demo.com/password (user)

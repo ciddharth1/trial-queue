@@ -260,6 +260,32 @@ io.engine.use((req: IncomingMessage, res: ServerResponse, next: () => void) => {
     return
   }
 
+  // Broadcast endpoint - allows Next.js API routes to trigger socket events
+  // POST /broadcast with JSON body { event, data }
+  if (req.url === '/broadcast' && req.method === 'POST') {
+    let body = ''
+    req.on('data', (chunk) => { body += chunk.toString() })
+    req.on('end', () => {
+      try {
+        const { event, data } = JSON.parse(body)
+        if (!event) {
+          res.writeHead(400, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ error: 'Missing event name' }))
+          return
+        }
+        // Broadcast to all connected clients
+        io.emit(event, data)
+        log('INFO', 'Server-side broadcast triggered', { event, emittedBy: 'api-route' })
+        res.writeHead(200, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ success: true, event, timestamp: getTimestamp() }))
+      } catch (error) {
+        res.writeHead(400, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ error: 'Invalid JSON body' }))
+      }
+    })
+    return
+  }
+
   next()
 })
 

@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { authenticateRequest } from '@/lib/auth'
 import { successResponse, errorResponse } from '@/lib/api-response'
 import { generateTokenNumber, estimateWaitTime, getNextSequence } from '@/lib/queue-utils'
+import { broadcastTokenCreated, broadcastQueueJoined } from '@/lib/socket-broadcast'
 
 // POST - Join a queue
 export async function POST(request: NextRequest) {
@@ -117,6 +118,19 @@ export async function POST(request: NextRequest) {
         }),
       },
     })
+
+    // Broadcast real-time events to all connected clients (admin dashboards, other users)
+    // This ensures the admin panel updates immediately when a user joins a queue
+    broadcastTokenCreated({
+      queueId,
+      tokenId: result.token.id,
+      tokenNumber: result.token.tokenNumber,
+      userId,
+      position: result.position,
+      estimatedWaitMinutes: Math.ceil(result.estimatedWait / 60),
+    })
+
+    broadcastQueueJoined(queueId, userId)
 
     return successResponse(
       {

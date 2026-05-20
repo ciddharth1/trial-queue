@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { authenticateRequest } from '@/lib/auth'
 import { successResponse, errorResponse } from '@/lib/api-response'
 import { recalculatePositions } from '@/lib/queue-utils'
+import { broadcastTokenExpired, broadcastQueueLeft, broadcastQueueUpdate } from '@/lib/socket-broadcast'
 
 // POST - Leave a queue
 export async function POST(request: NextRequest) {
@@ -96,6 +97,18 @@ export async function POST(request: NextRequest) {
         }),
       },
     })
+
+    // Broadcast real-time events so admin dashboards and other users see the change immediately
+    broadcastQueueLeft(queueId, userId)
+    broadcastQueueUpdate(queueId, 'QUEUE_UPDATED')
+    if (token) {
+      broadcastTokenExpired({
+        queueId,
+        tokenId: token.id,
+        tokenNumber: token.tokenNumber,
+        reason: 'CANCELLED',
+      })
+    }
 
     return successResponse(null, 'Successfully left the queue')
   } catch (error) {

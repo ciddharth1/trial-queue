@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { authenticateRequest, requireAdmin } from '@/lib/auth'
 import { successResponse, errorResponse } from '@/lib/api-response'
 import { recalculatePositions } from '@/lib/queue-utils'
+import { broadcastTokenCalled, broadcastTokenServing, broadcastTokenCompleted, broadcastTokenExpired, broadcastQueueUpdate } from '@/lib/socket-broadcast'
 
 // GET - Get token details
 export async function GET(
@@ -194,6 +195,46 @@ export async function PATCH(
         details: JSON.stringify({ status, serviceCounterId }),
       },
     })
+
+    // Broadcast real-time socket events so all dashboards update immediately
+    if (status === 'CALLED') {
+      broadcastTokenCalled({
+        queueId: existingToken.queueId,
+        tokenId: id,
+        tokenNumber: existingToken.tokenNumber,
+        counterId: serviceCounterId || existingToken.serviceCounterId || 'counter-1',
+        counterName: 'Counter 1',
+        userId: existingToken.userId,
+      })
+      broadcastQueueUpdate(existingToken.queueId, 'QUEUE_UPDATED')
+    } else if (status === 'SERVING') {
+      broadcastTokenServing({
+        queueId: existingToken.queueId,
+        tokenId: id,
+        tokenNumber: existingToken.tokenNumber,
+        counterId: serviceCounterId || existingToken.serviceCounterId || 'counter-1',
+        counterName: 'Counter 1',
+        userId: existingToken.userId,
+      })
+    } else if (status === 'COMPLETED') {
+      broadcastTokenCompleted({
+        queueId: existingToken.queueId,
+        tokenId: id,
+        tokenNumber: existingToken.tokenNumber,
+        counterId: serviceCounterId || existingToken.serviceCounterId || 'counter-1',
+        counterName: 'Counter 1',
+        userId: existingToken.userId,
+      })
+      broadcastQueueUpdate(existingToken.queueId, 'QUEUE_UPDATED')
+    } else if (status === 'EXPIRED' || status === 'CANCELLED') {
+      broadcastTokenExpired({
+        queueId: existingToken.queueId,
+        tokenId: id,
+        tokenNumber: existingToken.tokenNumber,
+        reason: status === 'CANCELLED' ? 'CANCELLED' : 'TIMEOUT',
+      })
+      broadcastQueueUpdate(existingToken.queueId, 'QUEUE_UPDATED')
+    }
 
     return successResponse(updatedToken, 'Token updated successfully')
   } catch (error) {

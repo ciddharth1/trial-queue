@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { db } from '@/lib/db'
 import { requireAdmin } from '@/lib/auth'
 import { successResponse, errorResponse } from '@/lib/api-response'
+import { broadcastQueueUpdate } from '@/lib/socket-broadcast'
 
 // GET - Get queue details
 export async function GET(
@@ -113,6 +114,14 @@ export async function PATCH(
       },
     })
 
+    // Broadcast real-time socket event so all dashboards update immediately
+    if (status) {
+      const updateType = status === 'ACTIVE' ? 'QUEUE_RESUMED' : status === 'PAUSED' ? 'QUEUE_PAUSED' : status === 'CLOSED' ? 'QUEUE_CLOSED' : 'QUEUE_UPDATED'
+      broadcastQueueUpdate(id, updateType)
+    } else {
+      broadcastQueueUpdate(id, 'QUEUE_UPDATED')
+    }
+
     return successResponse(queue, 'Queue updated successfully')
   } catch (error) {
     console.error('Update queue error:', error)
@@ -193,6 +202,9 @@ export async function DELETE(
         details: JSON.stringify({ hadActiveTokens: activeTokens > 0 }),
       },
     })
+
+    // Broadcast real-time socket event so all dashboards update immediately
+    broadcastQueueUpdate(id, activeTokens > 0 ? 'QUEUE_CLOSED' : 'QUEUE_UPDATED')
 
     return successResponse(
       null,

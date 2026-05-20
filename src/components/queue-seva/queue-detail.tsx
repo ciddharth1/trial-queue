@@ -61,7 +61,7 @@ export function QueueDetailScreen() {
     if (selectedQueue?.id) {
       loadQueueDetail()
     }
-  }, [selectedQueue?.id])
+  }, [selectedQueue?.id, loadQueueDetail])
 
   // Refresh when refreshCounter changes (other users/admins made changes)
   useEffect(() => {
