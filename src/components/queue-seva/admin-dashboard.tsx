@@ -52,7 +52,7 @@ function StatCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
-      className="rounded-2xl border border-slate-800/50 bg-gradient-to-b from-slate-900/80 to-slate-900/40 p-5 backdrop-blur-sm"
+      className="rounded-2xl border border-outline-variant/30 bg-gradient-to-b from-surface-container/80 to-surface-container/40 p-5 backdrop-blur-sm"
     >
       <div className="flex items-start justify-between">
         <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${color}`}>
@@ -63,7 +63,7 @@ function StatCard({
             className={`flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
               change >= 0
                 ? 'bg-emerald-500/10 text-emerald-400'
-                : 'bg-red-500/10 text-red-400'
+                : 'bg-red-500/10 text-error'
             }`}
           >
             {change >= 0 ? (
@@ -75,14 +75,14 @@ function StatCard({
           </div>
         )}
       </div>
-      <p className="mt-3 text-2xl font-bold text-white">{value}</p>
-      <p className="mt-0.5 text-xs text-slate-500">{label}</p>
+      <p className="mt-3 text-2xl font-bold text-on-surface">{value}</p>
+      <p className="mt-0.5 text-xs text-on-surface-variant">{label}</p>
     </motion.div>
   )
 }
 
 // Mini chart using CSS bars
-function MiniBarChart({ data, color = '#4F46E5' }: { data: number[]; color?: string }) {
+function MiniBarChart({ data, color = '#4f46e5' }: { data: number[]; color?: string }) {
   const max = Math.max(...data, 1)
   return (
     <div className="flex items-end gap-1 h-16">
@@ -140,15 +140,14 @@ export function AdminDashboard() {
     }
   }, [])
 
-  // Initial load - always fetch fresh data on mount
+  // Initial load
   useEffect(() => {
     setLoading(true)
     loadStats()
     loadChartData()
   }, [])
 
-  // Auto-refresh when refreshCounter changes (triggered by user/admin actions)
-  // This is the primary real-time sync mechanism within the same tab
+  // Auto-refresh when refreshCounter changes
   useEffect(() => {
     if (refreshCounter > 0) {
       loadStats()
@@ -156,7 +155,7 @@ export function AdminDashboard() {
     }
   }, [refreshCounter, loadStats, loadChartData])
 
-  // Auto-poll every 2 seconds for real-time updates (faster polling for better sync)
+  // Auto-poll every 2 seconds for real-time updates
   useEffect(() => {
     const interval = setInterval(() => {
       loadStats()
@@ -169,7 +168,7 @@ export function AdminDashboard() {
   const recentTokens = stats?.recentTokens || []
 
   return (
-    <div className="flex flex-1 flex-col bg-[#0F172A]">
+    <div className="flex flex-1 flex-col bg-background">
       <Header
         title="Admin Dashboard"
         subtitle={`Overview · ${user?.name || 'Admin'}`}
@@ -179,17 +178,17 @@ export function AdminDashboard() {
         <div className="mx-auto max-w-6xl space-y-6">
           {/* Last refresh indicator */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-[10px] text-slate-500">
+            <div className="flex items-center gap-2 text-[10px] text-on-surface-variant">
               <motion.div
                 className={`h-1.5 w-1.5 rounded-full ${socketConnected ? 'bg-emerald-400' : 'bg-amber-400'}`}
                 animate={{ opacity: [1, 0.4, 1] }}
                 transition={{ duration: 2, repeat: Infinity }}
               />
-              <span>{socketConnected ? 'Live · Real-time connected' : 'Live · Auto-refreshing every 3s'}</span>
+              <span>{socketConnected ? 'Live · Real-time connected' : 'Live · Auto-refreshing every 2s'}</span>
             </div>
             <button
               onClick={() => { loadStats(); loadChartData() }}
-              className="flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] text-slate-500 transition-colors hover:bg-slate-800 hover:text-slate-300"
+              className="flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-on-surface"
             >
               <RefreshCw className="h-3 w-3" />
               Refresh now
@@ -203,7 +202,7 @@ export function AdminDashboard() {
               label="Total Users"
               value={stats?.totalUsers ?? 0}
               change={12}
-              color="bg-[#4F46E5]/10 text-[#4F46E5]"
+              color="bg-primary/10 text-primary"
               delay={0}
             />
             <StatCard
@@ -211,7 +210,7 @@ export function AdminDashboard() {
               label="Active Queues"
               value={stats?.activeQueues ?? 0}
               change={5}
-              color="bg-[#06B6D4]/10 text-[#06B6D4]"
+              color="bg-secondary/10 text-secondary"
               delay={0.05}
             />
             <StatCard
@@ -239,17 +238,17 @@ export function AdminDashboard() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="rounded-2xl border border-slate-800/50 bg-gradient-to-b from-slate-900/80 to-slate-900/40 p-5 backdrop-blur-sm"
+              className="rounded-2xl border border-outline-variant/30 bg-gradient-to-b from-surface-container/80 to-surface-container/40 p-5 backdrop-blur-sm"
             >
               <div className="mb-4 flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-semibold text-white">Hourly Traffic</h3>
-                  <p className="text-xs text-slate-500">Today&apos;s queue joins by hour</p>
+                  <h3 className="text-sm font-semibold text-on-surface">Hourly Traffic</h3>
+                  <p className="text-xs text-on-surface-variant">Today&apos;s queue joins by hour</p>
                 </div>
-                <BarChart3 className="h-4 w-4 text-slate-600" />
+                <BarChart3 className="h-4 w-4 text-on-surface-variant" />
               </div>
-              <MiniBarChart data={hourlyData} color="#4F46E5" />
-              <div className="mt-2 flex justify-between text-[9px] text-slate-600">
+              <MiniBarChart data={hourlyData} color="#c3c0ff" />
+              <div className="mt-2 flex justify-between text-[9px] text-on-surface-variant">
                 <span>8AM</span>
                 <span>12PM</span>
                 <span>4PM</span>
@@ -262,17 +261,17 @@ export function AdminDashboard() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.25 }}
-              className="rounded-2xl border border-slate-800/50 bg-gradient-to-b from-slate-900/80 to-slate-900/40 p-5 backdrop-blur-sm"
+              className="rounded-2xl border border-outline-variant/30 bg-gradient-to-b from-surface-container/80 to-surface-container/40 p-5 backdrop-blur-sm"
             >
               <div className="mb-4 flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-semibold text-white">Daily Trends</h3>
-                  <p className="text-xs text-slate-500">Last 12 days performance</p>
+                  <h3 className="text-sm font-semibold text-on-surface">Daily Trends</h3>
+                  <p className="text-xs text-on-surface-variant">Last 12 days performance</p>
                 </div>
-                <TrendingUp className="h-4 w-4 text-slate-600" />
+                <TrendingUp className="h-4 w-4 text-on-surface-variant" />
               </div>
-              <MiniBarChart data={dailyData} color="#06B6D4" />
-              <div className="mt-2 flex justify-between text-[9px] text-slate-600">
+              <MiniBarChart data={dailyData} color="#4cd7f6" />
+              <div className="mt-2 flex justify-between text-[9px] text-on-surface-variant">
                 <span>May 3</span>
                 <span>May 9</span>
                 <span>May 14</span>
@@ -286,14 +285,14 @@ export function AdminDashboard() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="flex items-center gap-4 rounded-2xl border border-slate-800/50 bg-slate-900/50 p-5"
+              className="flex items-center gap-4 rounded-2xl border border-outline-variant/30 bg-surface-container/50 p-5"
             >
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#4F46E5]/10">
-                <Building2 className="h-6 w-6 text-[#4F46E5]" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+                <Building2 className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <p className="text-xl font-bold text-white">{stats?.totalServiceCenters ?? 0}</p>
-                <p className="text-xs text-slate-500">Service Centers</p>
+                <p className="text-xl font-bold text-on-surface">{stats?.totalServiceCenters ?? 0}</p>
+                <p className="text-xs text-on-surface-variant">Service Centers</p>
               </div>
             </motion.div>
 
@@ -301,14 +300,14 @@ export function AdminDashboard() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.35 }}
-              className="flex items-center gap-4 rounded-2xl border border-slate-800/50 bg-slate-900/50 p-5"
+              className="flex items-center gap-4 rounded-2xl border border-outline-variant/30 bg-surface-container/50 p-5"
             >
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#06B6D4]/10">
-                <Hash className="h-6 w-6 text-[#06B6D4]" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-secondary/10">
+                <Hash className="h-6 w-6 text-secondary" />
               </div>
               <div>
-                <p className="text-xl font-bold text-white">{stats?.totalTokensToday ?? 0}</p>
-                <p className="text-xs text-slate-500">Tokens Today</p>
+                <p className="text-xl font-bold text-on-surface">{stats?.totalTokensToday ?? 0}</p>
+                <p className="text-xs text-on-surface-variant">Tokens Today</p>
               </div>
             </motion.div>
 
@@ -316,18 +315,18 @@ export function AdminDashboard() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
-              className="flex items-center gap-4 rounded-2xl border border-slate-800/50 bg-slate-900/50 p-5"
+              className="flex items-center gap-4 rounded-2xl border border-outline-variant/30 bg-surface-container/50 p-5"
             >
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10">
                 <TrendingUp className="h-6 w-6 text-emerald-400" />
               </div>
               <div>
-                <p className="text-xl font-bold text-white">
+                <p className="text-xl font-bold text-on-surface">
                   {stats && stats.totalTokensToday > 0
                     ? Math.round((stats.tokensServedToday / stats.totalTokensToday) * 100)
                     : 0}%
                 </p>
-                <p className="text-xs text-slate-500">Served Rate</p>
+                <p className="text-xs text-on-surface-variant">Served Rate</p>
               </div>
             </motion.div>
           </div>
@@ -338,32 +337,32 @@ export function AdminDashboard() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.45 }}
-              className="rounded-2xl border border-slate-800/50 bg-gradient-to-b from-slate-900/80 to-slate-900/40 p-5 backdrop-blur-sm"
+              className="rounded-2xl border border-outline-variant/30 bg-gradient-to-b from-surface-container/80 to-surface-container/40 p-5 backdrop-blur-sm"
             >
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-white">Recent Tokens</h3>
+                <h3 className="text-sm font-semibold text-on-surface">Recent Tokens</h3>
                 <button
                   onClick={() => navigate('admin-queues')}
-                  className="text-xs text-[#4F46E5] hover:underline"
+                  className="text-xs text-primary hover:underline"
                 >
                   View all
                 </button>
               </div>
               <div className="space-y-2">
                 {recentTokens.slice(0, 5).map((token: any, i: number) => (
-                  <div key={token.id || i} className="flex items-center gap-3 rounded-xl bg-slate-800/20 p-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#4F46E5]/10 text-xs font-bold text-[#4F46E5]">
+                  <div key={token.id || i} className="flex items-center gap-3 rounded-xl bg-surface-container-high/20 p-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-xs font-bold text-primary">
                       {token.tokenNumber?.split('-')[0] || '?'}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-white truncate">{token.tokenNumber}</p>
-                      <p className="text-[10px] text-slate-500">{token.user?.name || 'Unknown'} · {token.queue?.name || 'Queue'}</p>
+                      <p className="text-xs font-medium text-on-surface truncate">{token.tokenNumber}</p>
+                      <p className="text-[10px] text-on-surface-variant">{token.user?.name || 'Unknown'} · {token.queue?.name || 'Queue'}</p>
                     </div>
                     <span className={`rounded-full px-2 py-0.5 text-[9px] font-semibold ${
                       token.status === 'COMPLETED' ? 'bg-emerald-500/10 text-emerald-400' :
-                      token.status === 'CALLED' ? 'bg-[#4F46E5]/10 text-[#4F46E5]' :
-                      token.status === 'SERVING' ? 'bg-[#06B6D4]/10 text-[#06B6D4]' :
-                      token.status === 'CANCELLED' ? 'bg-red-500/10 text-red-400' :
+                      token.status === 'CALLED' ? 'bg-primary/10 text-primary' :
+                      token.status === 'SERVING' ? 'bg-secondary/10 text-secondary' :
+                      token.status === 'CANCELLED' ? 'bg-error/10 text-error' :
                       'bg-amber-500/10 text-amber-400'
                     }`}>
                       {token.status}
@@ -381,14 +380,14 @@ export function AdminDashboard() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 }}
               onClick={() => navigate('admin-analytics')}
-              className="flex items-center gap-4 rounded-2xl border border-[#4F46E5]/20 bg-[#4F46E5]/5 p-5 text-left transition-all hover:border-[#4F46E5]/40 hover:bg-[#4F46E5]/10"
+              className="flex items-center gap-4 rounded-2xl border border-primary-container/20 bg-primary-container/5 p-5 text-left transition-all hover:border-primary-container/40 hover:bg-primary-container/10"
             >
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#4F46E5]/20">
-                <BarChart3 className="h-6 w-6 text-[#4F46E5]" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-container/20">
+                <BarChart3 className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-white">View Analytics</p>
-                <p className="text-xs text-slate-500">Detailed performance insights</p>
+                <p className="text-sm font-semibold text-on-surface">View Analytics</p>
+                <p className="text-xs text-on-surface-variant">Detailed performance insights</p>
               </div>
             </motion.button>
 
@@ -397,14 +396,14 @@ export function AdminDashboard() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.55 }}
               onClick={() => navigate('admin-queues')}
-              className="flex items-center gap-4 rounded-2xl border border-[#06B6D4]/20 bg-[#06B6D4]/5 p-5 text-left transition-all hover:border-[#06B6D4]/40 hover:bg-[#06B6D4]/10"
+              className="flex items-center gap-4 rounded-2xl border border-secondary-container/20 bg-secondary-container/5 p-5 text-left transition-all hover:border-secondary-container/40 hover:bg-secondary-container/10"
             >
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#06B6D4]/20">
-                <ListOrdered className="h-6 w-6 text-[#06B6D4]" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-secondary-container/20">
+                <ListOrdered className="h-6 w-6 text-secondary" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-white">Manage Queues</p>
-                <p className="text-xs text-slate-500">Create, edit, and control queues</p>
+                <p className="text-sm font-semibold text-on-surface">Manage Queues</p>
+                <p className="text-xs text-on-surface-variant">Create, edit, and control queues</p>
               </div>
             </motion.button>
           </div>

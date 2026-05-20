@@ -57,7 +57,7 @@ export function QueuesListScreen() {
   )
 
   return (
-    <div className="flex flex-1 flex-col bg-[#0F172A]">
+    <div className="flex flex-1 flex-col bg-background">
       <Header title="All Queues" subtitle={`${queues.length} queues available`} showQr={false} />
 
       <main className="flex-1 overflow-y-auto p-4 sm:p-6">

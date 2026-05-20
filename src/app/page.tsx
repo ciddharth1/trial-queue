@@ -16,6 +16,7 @@ import { QueueDetailScreen } from '@/components/queue-seva/queue-detail'
 import { TokenDisplayScreen } from '@/components/queue-seva/token-display'
 import { LiveTrackerScreen } from '@/components/queue-seva/live-tracker'
 import { QRScannerScreen } from '@/components/queue-seva/qr-scanner'
+import { BranchCheckinScreen } from '@/components/queue-seva/branch-checkin'
 import { NotificationsScreen } from '@/components/queue-seva/notifications'
 import { ProfileScreen } from '@/components/queue-seva/profile-screen'
 import { SettingsScreen } from '@/components/queue-seva/settings-screen'
@@ -43,7 +44,9 @@ function ViewRouter({ view }: { view: AppView }) {
     case 'queue-detail':
       return <LayoutWithSidebar><QueueDetailScreen /></LayoutWithSidebar>
     case 'qr-scanner':
-      return <LayoutWithSidebar><QRScannerScreen /></LayoutWithSidebar>
+      return <BranchCheckinScreen />
+    case 'branch-checkin':
+      return <BranchCheckinScreen />
     case 'token-display':
       return <LayoutWithSidebar><TokenDisplayScreen /></LayoutWithSidebar>
     case 'live-tracker':
@@ -68,7 +71,7 @@ function ViewRouter({ view }: { view: AppView }) {
 // Layout wrapper with sidebar for authenticated views
 function LayoutWithSidebar({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex h-screen bg-[#0F172A]">
+    <div className="flex h-screen bg-background">
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
         {children}

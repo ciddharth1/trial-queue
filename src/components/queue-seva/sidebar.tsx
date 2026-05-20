@@ -13,6 +13,7 @@ import {
   LogOut,
   X,
   Users,
+  MapPin,
 } from 'lucide-react'
 import { useAppStore, type AppView } from '@/lib/store'
 import { cn } from '@/lib/utils'
@@ -26,8 +27,8 @@ interface NavItem {
 
 const userNavItems: NavItem[] = [
   { icon: LayoutDashboard, label: 'Dashboard', view: 'dashboard' },
+  { icon: MapPin, label: 'Check-in', view: 'qr-scanner' },
   { icon: ListOrdered, label: 'My Queues', view: 'queues' },
-  { icon: QrCode, label: 'QR Scanner', view: 'qr-scanner' },
   { icon: Bell, label: 'Notifications', view: 'notifications' },
   { icon: User, label: 'Profile', view: 'profile' },
   { icon: Settings, label: 'Settings', view: 'settings' },
@@ -38,7 +39,7 @@ const adminNavItems: NavItem[] = [
   { icon: BarChart3, label: 'Analytics', view: 'admin-analytics', roles: ['ADMIN', 'SUPER_ADMIN'] },
   { icon: ListOrdered, label: 'Queue Mgmt', view: 'admin-queues', roles: ['ADMIN', 'SUPER_ADMIN'] },
   { icon: Users, label: 'All Queues', view: 'queues' },
-  { icon: QrCode, label: 'QR Scanner', view: 'qr-scanner' },
+  { icon: MapPin, label: 'Check-in', view: 'qr-scanner' },
   { icon: Bell, label: 'Notifications', view: 'notifications' },
   { icon: User, label: 'Profile', view: 'profile' },
 ]
@@ -65,14 +66,14 @@ export function Sidebar() {
       {/* Sidebar */}
       <motion.aside
         className={cn(
-          'fixed left-0 top-0 z-50 flex h-full w-72 flex-col border-r border-slate-800/50 bg-[#111827]/95 backdrop-blur-xl transition-transform duration-300 lg:relative lg:z-0 lg:translate-x-0',
+          'fixed left-0 top-0 z-50 flex h-full w-72 flex-col border-r border-outline-variant/50 bg-surface-container-low/95 backdrop-blur-xl transition-transform duration-300 lg:relative lg:z-0 lg:translate-x-0',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
         {/* Header */}
-        <div className="flex h-16 items-center justify-between border-b border-slate-800/50 px-5">
+        <div className="flex h-16 items-center justify-between border-b border-outline-variant/30 px-5">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#4F46E5] to-[#06B6D4] shadow-lg shadow-[#4F46E5]/20">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary-container to-tertiary-container shadow-lg shadow-primary-container/20">
               <svg width="18" height="18" viewBox="0 0 48 48" fill="none">
                 <path d="M16 8H32C36.4183 8 40 11.5817 40 16V32C40 36.4183 36.4183 40 32 40H16C11.5817 40 8 36.4183 8 32V16C8 11.5817 11.5817 8 16 8Z" stroke="white" strokeWidth="3" fill="none" />
                 <path d="M16 18H32" stroke="white" strokeWidth="3" strokeLinecap="round" />
@@ -81,15 +82,15 @@ export function Sidebar() {
               </svg>
             </div>
             <div>
-              <h1 className="text-sm font-bold text-white">
-                Queue<span className="text-[#06B6D4]">Seva</span>
+              <h1 className="text-sm font-bold text-on-surface">
+                Queue<span className="text-secondary">Seva</span>
               </h1>
-              <p className="text-[10px] text-slate-500">Smart Queue Management</p>
+              <p className="text-[10px] text-on-surface-variant">Smart Queue Management</p>
             </div>
           </div>
           <button
             onClick={() => setSidebarOpen(false)}
-            className="rounded-lg p-1 text-slate-500 hover:bg-slate-800 hover:text-white lg:hidden"
+            className="rounded-lg p-1 text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface lg:hidden"
           >
             <X className="h-5 w-5" />
           </button>
@@ -110,26 +111,26 @@ export function Sidebar() {
                   className={cn(
                     'group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all',
                     isActive
-                      ? 'bg-[#4F46E5]/10 text-[#4F46E5] shadow-sm'
-                      : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'
+                      ? 'bg-primary/10 text-primary shadow-sm'
+                      : 'text-on-surface-variant hover:bg-surface-container-high/50 hover:text-on-surface'
                   )}
                 >
                   <item.icon
                     className={cn(
                       'h-5 w-5 transition-colors',
-                      isActive ? 'text-[#4F46E5]' : 'text-slate-500 group-hover:text-slate-300'
+                      isActive ? 'text-primary' : 'text-on-surface-variant group-hover:text-on-surface'
                     )}
                   />
                   <span className="flex-1 text-left">{item.label}</span>
                   {item.view === 'notifications' && unreadCount > 0 && (
-                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#4F46E5] px-1.5 text-[10px] font-bold text-white">
+                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary-container px-1.5 text-[10px] font-bold text-on-primary">
                       {unreadCount}
                     </span>
                   )}
                   {isActive && (
                     <motion.div
                       layoutId="nav-indicator"
-                      className="absolute left-0 h-6 w-1 rounded-r-full bg-[#4F46E5]"
+                      className="absolute left-0 h-6 w-1 rounded-r-full bg-primary"
                       transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                     />
                   )}
@@ -140,22 +141,22 @@ export function Sidebar() {
         </nav>
 
         {/* User section */}
-        <div className="border-t border-slate-800/50 p-4">
+        <div className="border-t border-outline-variant/30 p-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[#4F46E5]/30 to-[#06B6D4]/30 text-sm font-bold text-white">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-primary/30 to-secondary/30 text-sm font-bold text-on-surface">
               {user?.name?.charAt(0)?.toUpperCase() || 'U'}
             </div>
             <div className="flex-1 overflow-hidden">
-              <p className="truncate text-sm font-medium text-white">{user?.name || 'User'}</p>
-              <p className="truncate text-[11px] text-slate-500">{user?.email || ''}</p>
+              <p className="truncate text-sm font-medium text-on-surface">{user?.name || 'User'}</p>
+              <p className="truncate text-[11px] text-on-surface-variant">{user?.email || ''}</p>
             </div>
             {user?.role === 'ADMIN' && (
-              <Shield className="h-4 w-4 text-[#06B6D4]" />
+              <Shield className="h-4 w-4 text-secondary" />
             )}
           </div>
           <button
             onClick={logout}
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-800 bg-slate-900/50 px-3 py-2 text-xs font-medium text-slate-400 transition-all hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-400"
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-outline-variant bg-surface-container/50 px-3 py-2 text-xs font-medium text-on-surface-variant transition-all hover:border-error/30 hover:bg-error/10 hover:text-error"
           >
             <LogOut className="h-3.5 w-3.5" />
             Sign Out

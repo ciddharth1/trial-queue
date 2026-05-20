@@ -43,7 +43,7 @@ export function LoginScreen() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#0F172A]">
+    <div className="flex min-h-screen flex-col bg-background">
       <div className="relative flex flex-1 flex-col overflow-hidden px-6">
         {/* Background effects */}
         <div className="absolute left-0 top-0 h-64 w-64 rounded-full bg-[#4F46E5]/5 blur-[80px]" />
@@ -217,7 +217,7 @@ export function RegisterScreen() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#0F172A]">
+    <div className="flex min-h-screen flex-col bg-background">
       <div className="relative flex flex-1 flex-col overflow-hidden px-6">
         {/* Background effects */}
         <div className="absolute right-0 top-0 h-64 w-64 rounded-full bg-[#4F46E5]/5 blur-[80px]" />

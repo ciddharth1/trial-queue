@@ -13,6 +13,7 @@ export type AppView =
   | 'queues'
   | 'queue-detail'
   | 'qr-scanner'
+  | 'branch-checkin'
   | 'token-display'
   | 'live-tracker'
   | 'notifications'

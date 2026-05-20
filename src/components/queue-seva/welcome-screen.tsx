@@ -18,7 +18,7 @@ export function WelcomeScreen() {
   const navigate = useAppStore((s) => s.navigate)
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#0F172A]">
+    <div className="flex min-h-screen flex-col bg-background">
       {/* Hero Section */}
       <div className="relative flex flex-1 flex-col items-center justify-center overflow-hidden px-6 py-12">
         {/* Background effects */}

@@ -100,7 +100,7 @@ export function QRScannerScreen() {
   }
 
   return (
-    <div className="flex flex-1 flex-col bg-[#0F172A]">
+    <div className="flex flex-1 flex-col bg-background">
       <Header title="QR Scanner" subtitle="Scan to join a queue" showQr={false} />
 
       <main className="flex flex-1 flex-col items-center p-4 sm:p-6">

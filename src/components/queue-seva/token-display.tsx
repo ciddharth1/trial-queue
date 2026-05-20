@@ -110,7 +110,7 @@ export function TokenDisplayScreen() {
 
   if (!token) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center bg-[#0F172A]">
+      <div className="flex flex-1 flex-col items-center justify-center bg-background">
         <p className="text-sm text-slate-400">No token selected</p>
         <Button onClick={() => navigate('dashboard')} className="mt-4 bg-[#4F46E5] text-white">
           Back to Dashboard
@@ -125,7 +125,7 @@ export function TokenDisplayScreen() {
   const isCompleted = token.status === 'COMPLETED'
 
   return (
-    <div className="flex flex-1 flex-col bg-[#0F172A]">
+    <div className="flex flex-1 flex-col bg-background">
       <Header title="Your Token" subtitle={token.queueName || 'Queue'} showNotifications={true} showQr={false} />
 
       <main className="flex flex-1 flex-col items-center justify-center p-6">

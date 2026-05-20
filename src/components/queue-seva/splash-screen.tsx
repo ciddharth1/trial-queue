@@ -5,7 +5,7 @@ import { Loader2 } from 'lucide-react'
 
 export function SplashScreen() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-[#0F172A]">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background">
       {/* Animated background circles */}
       <div className="absolute inset-0 overflow-hidden">
         <motion.div

@@ -118,7 +118,7 @@ export function QueueDetailScreen() {
 
   if (!queue) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center bg-[#0F172A]">
+      <div className="flex flex-1 flex-col items-center justify-center bg-background">
         <AlertCircle className="mb-4 h-12 w-12 text-slate-600" />
         <p className="text-sm text-slate-400">No queue selected</p>
         <Button onClick={() => navigate('queues')} className="mt-4 bg-[#4F46E5] text-white">
@@ -134,7 +134,7 @@ export function QueueDetailScreen() {
   const completedTokens = tokens.filter((t) => t.status === 'COMPLETED')
 
   return (
-    <div className="flex flex-1 flex-col bg-[#0F172A]">
+    <div className="flex flex-1 flex-col bg-background">
       <Header title={queue.name} subtitle={`Queue ${queue.prefix}`} showQr={false} />
 
       <main className="flex-1 overflow-y-auto p-4 sm:p-6">
