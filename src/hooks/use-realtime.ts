@@ -192,7 +192,9 @@ export function useAutoRefresh({
   refreshOnEvents = ['queue-update', 'token-update', 'admin-update', 'all'],
 }: UseAutoRefreshOptions) {
   const refreshRef = useRef(onRefresh)
-  refreshRef.current = onRefresh
+  useEffect(() => {
+    refreshRef.current = onRefresh
+  }, [onRefresh])
 
   // Polling - reduced interval for more responsive updates
   useEffect(() => {

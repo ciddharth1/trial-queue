@@ -236,8 +236,24 @@ const io = new Server(httpServer, {
 // ============================================================================
 
 io.engine.use((req: IncomingMessage, res: ServerResponse, next: () => void) => {
+  // Strip XTransformPort query parameter from URL (added by Caddy gateway)
+  // This is needed because the Caddy proxy passes the query string through
+  if (req.url && req.url.includes('XTransformPort=')) {
+    try {
+      const parsed = new URL(req.url, 'http://localhost')
+      parsed.searchParams.delete('XTransformPort')
+      req.url = parsed.pathname + (parsed.search ? parsed.search : '')
+    } catch {
+      // If URL parsing fails, just strip it with regex
+      req.url = req.url.replace(/[?&]XTransformPort=[^&]*/, '').replace(/&&/g, '&').replace(/\?$/, '')
+    }
+  }
+
+  // Parse the URL path without query parameters for matching
+  const urlPath = (req.url || '').split('?')[0]
+
   // Health check endpoint
-  if (req.url === '/health' && req.method === 'GET') {
+  if (urlPath === '/health' && req.method === 'GET') {
     res.writeHead(200, { 'Content-Type': 'application/json' })
     res.end(JSON.stringify({
       status: 'healthy',
@@ -251,7 +267,7 @@ io.engine.use((req: IncomingMessage, res: ServerResponse, next: () => void) => {
   }
 
   // Readiness check endpoint
-  if (req.url === '/ready' && req.method === 'GET') {
+  if (urlPath === '/ready' && req.method === 'GET') {
     res.writeHead(200, { 'Content-Type': 'application/json' })
     res.end(JSON.stringify({
       status: 'ready',
@@ -262,7 +278,7 @@ io.engine.use((req: IncomingMessage, res: ServerResponse, next: () => void) => {
 
   // Broadcast endpoint - allows Next.js API routes to trigger socket events
   // POST /broadcast with JSON body { event, data }
-  if (req.url === '/broadcast' && req.method === 'POST') {
+  if (urlPath === '/broadcast' && req.method === 'POST') {
     let body = ''
     req.on('data', (chunk) => { body += chunk.toString() })
     req.on('end', () => {

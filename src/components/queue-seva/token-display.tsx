@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { Clock, ListOrdered, ArrowRight, CheckCircle2, Bell, Timer, LogOut, Loader2 } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
@@ -22,10 +22,60 @@ function formatWaitTime(seconds: number | null): string {
 }
 
 export function TokenDisplayScreen() {
-  const { selectedToken, navigate, selectedQueue, setUserTokens, userTokens, triggerRefresh } = useAppStore()
+  const { selectedToken, navigate, selectedQueue, setUserTokens, userTokens, triggerRefresh, refreshCounter } = useAppStore()
   const [leaving, setLeaving] = useState(false)
+  const [liveToken, setLiveToken] = useState(selectedToken)
 
-  const token = selectedToken
+  // Auto-refresh token status to detect when admin calls/completes the token
+  const refreshTokenStatus = useCallback(async () => {
+    if (!selectedToken?.id) return
+    try {
+      const result = await apiClient.getToken(selectedToken.id)
+      if (result.success && result.data) {
+        const updated = result.data as any
+        const newToken = {
+          ...selectedToken,
+          status: updated.status || selectedToken.status,
+          position: updated.currentPosition || selectedToken.position,
+          calledAt: updated.calledAt || selectedToken.calledAt,
+          estimatedWait: updated.estimatedWait ?? selectedToken.estimatedWait,
+        }
+        setLiveToken(newToken)
+        // Update in user tokens list too
+        const store = useAppStore.getState()
+        store.setUserTokens(store.userTokens.map(t => t.id === selectedToken.id ? newToken : t))
+        if (selectedToken.status !== updated.status) {
+          useAppStore.getState().setSelectedToken(newToken)
+          // Show toast notification for status change
+          if (updated.status === 'CALLED') {
+            toast.success('Your token has been called! Please proceed to the counter.')
+          } else if (updated.status === 'SERVING') {
+            toast.info('Your token is now being served.')
+          } else if (updated.status === 'COMPLETED') {
+            toast.success('Your service has been completed!')
+          }
+        }
+      }
+    } catch (error) {
+      // Silently ignore refresh errors
+    }
+  }, [selectedToken])
+
+  // Poll token status every 3 seconds for real-time updates
+  useEffect(() => {
+    if (!selectedToken?.id) return
+    const interval = setInterval(refreshTokenStatus, 3000)
+    return () => clearInterval(interval)
+  }, [selectedToken?.id, refreshTokenStatus])
+
+  // Also refresh on refreshCounter change
+  useEffect(() => {
+    if (refreshCounter > 0) {
+      refreshTokenStatus()
+    }
+  }, [refreshCounter, refreshTokenStatus])
+
+  const token = liveToken
 
   const handleLeaveQueue = async () => {
     if (!token) return
@@ -72,6 +122,7 @@ export function TokenDisplayScreen() {
   const isCalled = token.status === 'CALLED'
   const isServing = token.status === 'SERVING'
   const isWaiting = token.status === 'WAITING'
+  const isCompleted = token.status === 'COMPLETED'
 
   return (
     <div className="flex flex-1 flex-col bg-[#0F172A]">
@@ -105,13 +156,16 @@ export function TokenDisplayScreen() {
                       ? 'bg-[#4F46E5]/20 text-[#4F46E5]'
                       : isServing
                         ? 'bg-emerald-500/20 text-emerald-400'
-                        : 'bg-amber-500/20 text-amber-400'
+                        : isCompleted
+                          ? 'bg-emerald-500/20 text-emerald-400'
+                          : 'bg-amber-500/20 text-amber-400'
                   }`}
                 >
                   {isCalled && <Bell className="h-3 w-3" />}
                   {isServing && <CheckCircle2 className="h-3 w-3" />}
                   {isWaiting && <Clock className="h-3 w-3" />}
-                  {isCalled ? 'It\'s Your Turn!' : isServing ? 'Being Served' : 'Waiting'}
+                  {isCompleted && <CheckCircle2 className="h-3 w-3" />}
+                  {isCalled ? 'It\'s Your Turn!' : isServing ? 'Being Served' : isCompleted ? 'Completed' : 'Waiting'}
                 </span>
               </motion.div>
 
@@ -174,7 +228,7 @@ export function TokenDisplayScreen() {
           </motion.div>
 
           {/* Leave Queue Button */}
-          {isWaiting && (
+          {(isWaiting || isCalled) && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -199,11 +253,26 @@ export function TokenDisplayScreen() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.7 }}
           >
-            <div className="rounded-xl border border-slate-800/50 bg-slate-900/30 p-4">
-              <p className="text-xs font-medium text-slate-400">
-                You will receive a notification when it&apos;s your turn. Keep this screen open or enable push notifications to stay updated.
-              </p>
-            </div>
+            {isCompleted ? (
+              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 text-center">
+                <CheckCircle2 className="mx-auto h-8 w-8 text-emerald-400 mb-2" />
+                <p className="text-sm font-semibold text-emerald-400">Service Completed!</p>
+                <p className="text-xs text-slate-500 mt-1">Your service has been completed. Thank you for using QueueSeva!</p>
+                <Button
+                  onClick={() => navigate('dashboard')}
+                  className="mt-3 bg-[#4F46E5] text-white hover:bg-[#4338CA]"
+                  size="sm"
+                >
+                  Back to Dashboard
+                </Button>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-slate-800/50 bg-slate-900/30 p-4">
+                <p className="text-xs font-medium text-slate-400">
+                  You will receive a notification when it&apos;s your turn. Keep this screen open or enable push notifications to stay updated.
+                </p>
+              </div>
+            )}
           </motion.div>
         </div>
       </main>

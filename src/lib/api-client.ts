@@ -45,9 +45,9 @@ class ApiClient {
       // Handle HTTP errors
       if (!response.ok) {
         if (response.status === 401) {
-          // Token expired - try refresh
+          // Token expired - try refresh (only if we haven't already tried)
           const store = (await import('@/lib/store')).useAppStore.getState()
-          if (store.refreshToken) {
+          if (store.refreshToken && !options._isRetry) {
             try {
               const refreshResult = await this.refreshToken(store.refreshToken)
               if (refreshResult.success && refreshResult.data) {
@@ -55,7 +55,7 @@ class ApiClient {
                 store.setAuth(store.user!, refreshResult.data.accessToken, store.refreshToken!)
                 // Retry the original request
                 headers['Authorization'] = `Bearer ${refreshResult.data.accessToken}`
-                const retryResponse = await fetch(`${BASE_URL}${endpoint}`, { ...options, headers })
+                const retryResponse = await fetch(`${BASE_URL}${endpoint}`, { ...options, headers, _isRetry: true } as any)
                 if (retryResponse.ok) {
                   return retryResponse.json()
                 }

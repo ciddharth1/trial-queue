@@ -3,8 +3,8 @@ import jwt from 'jsonwebtoken'
 import type { JwtPayload } from '@/types'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'queue-seva-jwt-secret-key-2024'
-const ACCESS_TOKEN_EXPIRY = '15m'
-const REFRESH_TOKEN_EXPIRY = '7d'
+const ACCESS_TOKEN_EXPIRY = '24h'
+const REFRESH_TOKEN_EXPIRY = '30d'
 
 // ─── PASSWORD HELPERS ───────────────────────────────────
 

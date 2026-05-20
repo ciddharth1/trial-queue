@@ -6,25 +6,20 @@ import { io, Socket } from 'socket.io-client'
 // Socket.io Client for Queue Seva Real-Time Updates
 // ============================================================================
 
-// Dynamically determine socket URL based on current page hostname
-// This ensures it works both locally and in the z.ai preview environment
+// Dynamically determine socket URL for z.ai preview environment
+// The Caddy gateway proxies requests with ?XTransformPort=3003 to the socket service
+// So we connect to the same origin with the XTransformPort query parameter
 function getSocketUrl(): string {
   if (typeof window !== 'undefined') {
+    // In the z.ai preview, use the same origin with XTransformPort query parameter
+    // The Caddy gateway will forward to the socket service on port 3003
     const envUrl = process.env.NEXT_PUBLIC_SOCKET_URL
     if (envUrl) {
-      // If env URL is localhost, try to use the current hostname instead
-      // (for z.ai preview where localhost:3003 is not reachable from browser)
-      try {
-        const envParsed = new URL(envUrl)
-        if (envParsed.hostname === 'localhost' && window.location.hostname !== 'localhost') {
-          // Replace localhost with current hostname, keep the port
-          return `${envParsed.protocol}//${window.location.hostname}:${envParsed.port}`
-        }
-      } catch {
-        // Invalid URL, fall through
-      }
       return envUrl
     }
+    // Use the current origin (works both locally and in z.ai preview)
+    // The Caddyfile handles routing via XTransformPort query parameter
+    return window.location.origin
   }
   return 'http://localhost:3003'
 }
@@ -57,11 +52,15 @@ class SocketManager {
 
     this.token = accessToken
 
+    // For z.ai preview, we use the same origin with XTransformPort query
+    // The Caddy gateway will route to port 3003 (socket service)
+    // Socket.io default path is /socket.io/ which matches the server config
     this.socket = io(SOCKET_URL, {
+      query: { XTransformPort: '3003' }, // Caddy gateway uses this to route to socket service
       auth: { token: accessToken },
       transports: ['websocket', 'polling'],
       reconnection: true,
-      reconnectionAttempts: Infinity, // Keep trying to reconnect
+      reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       timeout: 15000,
