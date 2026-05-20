@@ -487,6 +487,9 @@ io.on('connection', (socket: AuthenticatedSocket) => {
         io.to(adminRoom).emit('queue:updated', updatePayload)
       }
 
+      // Broadcast to ALL connected sockets for real-time cross-dashboard sync
+      io.emit('queue:updated', updatePayload)
+
       log('INFO', 'Queue update broadcasted', {
         queueId: data.queueId,
         updateType: data.updateType,
@@ -589,6 +592,7 @@ io.on('connection', (socket: AuthenticatedSocket) => {
 
   /**
    * token:created - Notify when a new token is generated
+   * Broadcasts to queue room AND all admin rooms so admin dashboards update in real-time
    */
   socket.on('token:created', (data: TokenCreatedData) => {
     try {
@@ -605,6 +609,10 @@ io.on('connection', (socket: AuthenticatedSocket) => {
       const queueRoom = getQueueRoom(data.queueId)
       io.to(queueRoom).emit('token:created', payload)
 
+      // Broadcast to ALL connected sockets so admin dashboards receive the update
+      // regardless of which rooms they've joined
+      io.emit('token:created', payload)
+
       log('INFO', 'Token created notification sent', {
         queueId: data.queueId,
         tokenId: data.tokenId,
@@ -619,6 +627,7 @@ io.on('connection', (socket: AuthenticatedSocket) => {
 
   /**
    * token:called - Notify when a token is called to a counter
+   * Broadcasts globally so user dashboards in other tabs/devices also receive the update
    */
   socket.on('token:called', (data: TokenCalledData) => {
     try {
@@ -641,6 +650,9 @@ io.on('connection', (socket: AuthenticatedSocket) => {
       const queueRoom = getQueueRoom(data.queueId)
       io.to(queueRoom).emit('token:called', payload)
 
+      // Broadcast to ALL connected sockets so user dashboards update in real-time
+      io.emit('token:called', payload)
+
       log('INFO', 'Token called notification sent', {
         queueId: data.queueId,
         tokenId: data.tokenId,
@@ -656,6 +668,7 @@ io.on('connection', (socket: AuthenticatedSocket) => {
 
   /**
    * token:serving - Notify when a token is being served
+   * Broadcasts globally for real-time sync across all dashboards
    */
   socket.on('token:serving', (data: TokenServingData) => {
     try {
@@ -678,6 +691,9 @@ io.on('connection', (socket: AuthenticatedSocket) => {
       const queueRoom = getQueueRoom(data.queueId)
       io.to(queueRoom).emit('token:serving', payload)
 
+      // Broadcast to ALL connected sockets
+      io.emit('token:serving', payload)
+
       log('INFO', 'Token serving notification sent', {
         queueId: data.queueId,
         tokenId: data.tokenId,
@@ -693,6 +709,7 @@ io.on('connection', (socket: AuthenticatedSocket) => {
 
   /**
    * token:completed - Notify when a token service is completed
+   * Broadcasts globally for real-time sync across all dashboards
    */
   socket.on('token:completed', (data: TokenCompletedData) => {
     try {
@@ -715,6 +732,9 @@ io.on('connection', (socket: AuthenticatedSocket) => {
       const queueRoom = getQueueRoom(data.queueId)
       io.to(queueRoom).emit('token:completed', payload)
 
+      // Broadcast to ALL connected sockets
+      io.emit('token:completed', payload)
+
       log('INFO', 'Token completed notification sent', {
         queueId: data.queueId,
         tokenId: data.tokenId,
@@ -730,6 +750,7 @@ io.on('connection', (socket: AuthenticatedSocket) => {
 
   /**
    * token:expired - Notify when a token has expired
+   * Broadcasts globally for real-time sync across all dashboards
    */
   socket.on('token:expired', (data: TokenExpiredData) => {
     try {
@@ -745,6 +766,9 @@ io.on('connection', (socket: AuthenticatedSocket) => {
 
       const queueRoom = getQueueRoom(data.queueId)
       io.to(queueRoom).emit('token:expired', payload)
+
+      // Broadcast to ALL connected sockets
+      io.emit('token:expired', payload)
 
       log('INFO', 'Token expired notification sent', {
         queueId: data.queueId,

@@ -114,8 +114,9 @@ export function AdminQueuesScreen() {
         loadQueues()
         // Broadcast the change to all tabs and via Socket.io
         emitRefresh('queue-update')
+        const createdQueueId = (result.data as any)?.id || ''
         socketManager.emitQueueUpdate({
-          queueId: '', // Will be set from the result
+          queueId: createdQueueId,
           organizationId: 'default',
           updateType: 'QUEUE_UPDATED',
         })

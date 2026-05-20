@@ -69,6 +69,15 @@ if (typeof window !== 'undefined') {
 
 let socketInitialized = false
 
+function triggerStoreRefresh() {
+  try {
+    const { useAppStore } = require('@/lib/store')
+    useAppStore.getState().triggerRefresh()
+  } catch {
+    // Store might not be ready yet
+  }
+}
+
 function initializeSocketListeners() {
   if (socketInitialized) return
   socketInitialized = true
@@ -106,12 +115,7 @@ function initializeSocketListeners() {
       allHandlers.forEach((handler) => handler(refreshType))
 
       // Update Zustand refresh counter
-      try {
-        const { useAppStore } = require('@/lib/store')
-        useAppStore.getState().triggerRefresh()
-      } catch {
-        // Store might not be ready yet
-      }
+      triggerStoreRefresh()
     })
   })
 
@@ -159,12 +163,7 @@ export function emitRefresh(type: RefreshEventType) {
   }
 
   // 3. Update Zustand refresh counter for same-tab reactivity
-  try {
-    const { useAppStore } = require('@/lib/store')
-    useAppStore.getState().triggerRefresh()
-  } catch {
-    // Store might not be ready yet
-  }
+  triggerStoreRefresh()
 }
 
 function subscribe(handler: (type: RefreshEventType) => void): () => void {
