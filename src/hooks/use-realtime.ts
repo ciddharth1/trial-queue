@@ -3,12 +3,12 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { useAppStore } from '@/lib/store'
 import { apiClient } from '@/lib/api-client'
+import { socketManager } from '@/lib/socket'
 
 // ─── CROSS-TAB REAL-TIME SYNC ───────────────────────
-// Uses BroadcastChannel API for same-browser cross-tab communication
-// and periodic polling for different-browser sessions.
-// When a user joins/leaves a queue or admin makes changes,
-// broadcast the event so ALL tabs (user + admin) refresh immediately.
+// Uses BroadcastChannel API for same-browser cross-tab communication,
+// Socket.io for cross-browser/device real-time communication,
+// and periodic polling as a fallback.
 
 type RefreshEventType = 'queue-update' | 'token-update' | 'notification-update' | 'admin-update' | 'all'
 
@@ -62,6 +62,73 @@ if (typeof window !== 'undefined') {
       console.warn('BroadcastChannel not available:', error)
     }
   }
+}
+
+// ─── SOCKET.IO INTEGRATION ───────────────────────────
+// Listen for Socket.io events and trigger refreshes
+
+let socketInitialized = false
+
+function initializeSocketListeners() {
+  if (socketInitialized) return
+  socketInitialized = true
+
+  // When any queue/token event comes via Socket.io, trigger a refresh
+  const socketEvents: string[] = [
+    'queue:member_joined',
+    'queue:member_left',
+    'queue:updated',
+    'queue:position_changed',
+    'queue:closed',
+    'token:created',
+    'token:called',
+    'token:serving',
+    'token:completed',
+    'token:expired',
+    'admin:dashboard',
+    'admin:stats',
+  ]
+
+  socketEvents.forEach((event) => {
+    socketManager.on(event, (data: any) => {
+      // Map socket events to refresh types
+      let refreshType: RefreshEventType = 'all'
+      if (event.startsWith('token:')) refreshType = 'token-update'
+      else if (event.startsWith('queue:')) refreshType = 'queue-update'
+      else if (event.startsWith('admin:')) refreshType = 'admin-update'
+
+      // Trigger local in-memory listeners
+      const handlers = listeners.get('global') || new Set()
+      handlers.forEach((handler) => handler(refreshType))
+
+      // Also trigger 'all' listeners
+      const allHandlers = listeners.get('all-listeners') || new Set()
+      allHandlers.forEach((handler) => handler(refreshType))
+
+      // Update Zustand refresh counter
+      try {
+        const { useAppStore } = require('@/lib/store')
+        useAppStore.getState().triggerRefresh()
+      } catch {
+        // Store might not be ready yet
+      }
+    })
+  })
+
+  // Socket connection status
+  socketManager.on('socket:connected', () => {
+    try {
+      const { useAppStore } = require('@/lib/store')
+      useAppStore.getState().setSocketConnected(true)
+    } catch {}
+  })
+
+  socketManager.on('socket:disconnected', () => {
+    try {
+      const { useAppStore } = require('@/lib/store')
+      useAppStore.getState().setSocketConnected(false)
+    } catch {}
+  })
 }
 
 // ─── EMIT REFRESH ────────────────────────────────────
@@ -138,7 +205,7 @@ export function useAutoRefresh({
     return () => clearInterval(id)
   }, [interval, enabled])
 
-  // Event-based refresh (in-memory + BroadcastChannel)
+  // Event-based refresh (in-memory + BroadcastChannel + Socket.io)
   useEffect(() => {
     if (!enabled || !refreshRef.current) return
 
@@ -150,6 +217,49 @@ export function useAutoRefresh({
 
     return unsubscribe
   }, [enabled])
+}
+
+// ─── SOCKET.IO CONNECTION HOOK ──────────────────────
+// Manages the Socket.io connection lifecycle
+
+export function useSocketConnection() {
+  const { accessToken, isAuthenticated } = useAppStore()
+
+  useEffect(() => {
+    // Initialize socket listeners once
+    initializeSocketListeners()
+
+    if (isAuthenticated && accessToken) {
+      // Connect to Socket.io server with JWT token
+      socketManager.connect(accessToken)
+    } else {
+      // Disconnect when logged out
+      socketManager.disconnect()
+    }
+
+    return () => {
+      // Don't disconnect on unmount - keep connection alive across views
+    }
+  }, [isAuthenticated, accessToken])
+}
+
+// ─── QUEUE ROOM HOOK ─────────────────────────────────
+// Join/leave queue rooms when viewing a specific queue
+
+export function useQueueRoom(queueId: string | null | undefined) {
+  const { isAuthenticated } = useAppStore()
+
+  useEffect(() => {
+    if (!isAuthenticated || !queueId) return
+
+    // Join the queue room to receive real-time updates
+    socketManager.joinQueueRoom(queueId)
+
+    return () => {
+      // Leave the queue room when navigating away
+      socketManager.leaveQueueRoom(queueId)
+    }
+  }, [queueId, isAuthenticated])
 }
 
 // ─── QUEUE DATA REFRESH HOOK ─────────────────────────
@@ -212,5 +322,6 @@ if (typeof window !== 'undefined') {
     if (broadcastChannel) {
       broadcastChannel.close()
     }
+    socketManager.disconnect()
   })
 }

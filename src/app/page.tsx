@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAppStore, type AppView } from '@/lib/store'
 import { apiClient } from '@/lib/api-client'
+import { useSocketConnection } from '@/hooks/use-realtime'
 
 // Import all screen components
 import { SplashScreen } from '@/components/queue-seva/splash-screen'
@@ -77,8 +78,11 @@ function LayoutWithSidebar({ children }: { children: React.ReactNode }) {
 }
 
 export default function Home() {
-  const { currentView, isAuthenticated, user, accessToken, navigate, setSocketConnected } = useAppStore()
+  const { currentView, isAuthenticated, user, accessToken, navigate } = useAppStore()
   const [initialized, setInitialized] = useState(false)
+
+  // Initialize Socket.io connection
+  useSocketConnection()
 
   // On mount, navigate based on auth state (persisted by Zustand)
   useEffect(() => {
@@ -90,8 +94,6 @@ export default function Home() {
         navigate('welcome')
       }
       setInitialized(true)
-      // Mark as connected since we're using BroadcastChannel + polling
-      setSocketConnected(true)
     }, 2500)
 
     return () => clearTimeout(timer)

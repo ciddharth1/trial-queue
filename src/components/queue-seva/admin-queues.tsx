@@ -20,6 +20,7 @@ import {
 import { useAppStore, type AppQueue } from '@/lib/store'
 import { apiClient } from '@/lib/api-client'
 import { emitRefresh } from '@/hooks/use-realtime'
+import { socketManager } from '@/lib/socket'
 import { Header } from './header'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -111,8 +112,13 @@ export function AdminQueuesScreen() {
         setNewQueue({ name: '', prefix: '', maxCapacity: 100, description: '' })
         toast.success('Queue created successfully!')
         loadQueues()
-        // Broadcast the change to all tabs
+        // Broadcast the change to all tabs and via Socket.io
         emitRefresh('queue-update')
+        socketManager.emitQueueUpdate({
+          queueId: '', // Will be set from the result
+          organizationId: 'default',
+          updateType: 'QUEUE_UPDATED',
+        })
       } else {
         toast.error(result.error || 'Failed to create queue')
       }
@@ -130,8 +136,14 @@ export function AdminQueuesScreen() {
       if (result.success) {
         toast.success(`Queue ${newStatus === 'ACTIVE' ? 'resumed' : newStatus === 'PAUSED' ? 'paused' : 'closed'} successfully!`)
         loadQueues()
-        // Broadcast the change to all tabs
+        // Broadcast the change to all tabs and via Socket.io
         emitRefresh('queue-update')
+        const updateType = newStatus === 'ACTIVE' ? 'QUEUE_RESUMED' : newStatus === 'PAUSED' ? 'QUEUE_PAUSED' : 'QUEUE_CLOSED'
+        socketManager.emitQueueUpdate({
+          queueId,
+          organizationId: 'default',
+          updateType,
+        })
       } else {
         toast.error(result.error || 'Failed to update queue')
       }
@@ -158,9 +170,17 @@ export function AdminQueuesScreen() {
         if (result.success) {
           toast.success(`Token ${nextToken.tokenNumber} has been called!`)
           loadQueues()
-          // Broadcast the change to all tabs (both admin and user)
+          // Broadcast the change to all tabs (both admin and user) and via Socket.io
           emitRefresh('token-update')
           emitRefresh('queue-update')
+          socketManager.emitTokenCalled({
+            queueId,
+            tokenId: nextToken.id,
+            tokenNumber: nextToken.tokenNumber,
+            counterId: 'counter-1',
+            counterName: 'Counter 1',
+            userId: nextToken.userId,
+          })
         } else {
           toast.error(result.error || 'Failed to call next token')
         }
@@ -187,9 +207,17 @@ export function AdminQueuesScreen() {
         if (result.success) {
           toast.success(`Token ${activeToken.tokenNumber} marked as completed!`)
           loadQueues()
-          // Broadcast the change to all tabs
+          // Broadcast the change to all tabs and via Socket.io
           emitRefresh('token-update')
           emitRefresh('queue-update')
+          socketManager.emitTokenCompleted({
+            queueId,
+            tokenId: activeToken.id,
+            tokenNumber: activeToken.tokenNumber,
+            counterId: 'counter-1',
+            counterName: 'Counter 1',
+            userId: activeToken.userId,
+          })
         } else {
           toast.error(result.error || 'Failed to complete token')
         }

@@ -17,6 +17,7 @@ import {
 import { useAppStore, type AppQueue, type AppToken } from '@/lib/store'
 import { apiClient } from '@/lib/api-client'
 import { emitRefresh } from '@/hooks/use-realtime'
+import { socketManager } from '@/lib/socket'
 import { Header } from './header'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -249,6 +250,13 @@ export function UserDashboard() {
         // Broadcast the change to all tabs (admin will see it)
         emitRefresh('queue-update')
         emitRefresh('token-update')
+        // Emit Socket.io event for real-time cross-browser notification
+        socketManager.emitTokenExpired({
+          queueId: token.queueId,
+          tokenId: token.id,
+          tokenNumber: token.tokenNumber,
+          reason: 'CANCELLED',
+        })
         loadData()
       } else {
         toast.error(result.error || 'Failed to leave queue')

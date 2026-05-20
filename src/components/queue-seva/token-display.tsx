@@ -6,6 +6,7 @@ import { Clock, ListOrdered, ArrowRight, CheckCircle2, Bell, Timer, LogOut, Load
 import { useAppStore } from '@/lib/store'
 import { apiClient } from '@/lib/api-client'
 import { emitRefresh } from '@/hooks/use-realtime'
+import { socketManager } from '@/lib/socket'
 import { Header } from './header'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
@@ -38,6 +39,13 @@ export function TokenDisplayScreen() {
         // Broadcast the change to ALL tabs (admin will see it immediately)
         emitRefresh('queue-update')
         emitRefresh('token-update')
+        // Emit Socket.io event for real-time cross-browser notification
+        socketManager.emitTokenExpired({
+          queueId: token.queueId,
+          tokenId: token.id,
+          tokenNumber: token.tokenNumber,
+          reason: 'CANCELLED',
+        })
         navigate('dashboard')
       } else {
         toast.error(result.error || 'Failed to leave queue')

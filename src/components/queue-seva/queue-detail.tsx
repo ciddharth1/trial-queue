@@ -19,7 +19,8 @@ import {
 } from 'lucide-react'
 import { useAppStore, type AppQueue, type AppToken } from '@/lib/store'
 import { apiClient } from '@/lib/api-client'
-import { emitRefresh } from '@/hooks/use-realtime'
+import { emitRefresh, useQueueRoom } from '@/hooks/use-realtime'
+import { socketManager } from '@/lib/socket'
 import { Header } from './header'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -28,6 +29,9 @@ import { toast } from 'sonner'
 
 export function QueueDetailScreen() {
   const { selectedQueue, navigate, goBack, user, setUserTokens, setSelectedToken, refreshCounter } = useAppStore()
+  // Join Socket.io room for this queue to receive real-time updates
+  useQueueRoom(selectedQueue?.id)
+
   const [queue, setQueue] = useState<AppQueue | null>(selectedQueue)
   const [tokens, setTokens] = useState<AppToken[]>([])
   const [loading, setLoading] = useState(false)
@@ -90,6 +94,15 @@ export function QueueDetailScreen() {
         // Broadcast the change to ALL tabs (admin will see it immediately)
         emitRefresh('queue-update')
         emitRefresh('token-update')
+        // Emit Socket.io event for real-time cross-browser notification
+        socketManager.emitTokenCreated({
+          queueId: queue.id,
+          tokenId: token.id,
+          tokenNumber: token.tokenNumber,
+          userId: user!.id,
+          position: token.position || token.sequenceNum,
+          estimatedWaitMinutes: token.estimatedWait ? Math.ceil(token.estimatedWait / 60) : undefined,
+        })
         toast.success(`You joined "${queue.name}"! Token: ${token.tokenNumber}`)
         navigate('token-display')
       } else {

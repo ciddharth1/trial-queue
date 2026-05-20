@@ -18,6 +18,7 @@ import {
 import { useAppStore } from '@/lib/store'
 import { apiClient } from '@/lib/api-client'
 import { emitRefresh } from '@/hooks/use-realtime'
+import { socketManager } from '@/lib/socket'
 import { Header } from './header'
 
 interface AdminStats {
@@ -100,7 +101,7 @@ function MiniBarChart({ data, color = '#4F46E5' }: { data: number[]; color?: str
 }
 
 export function AdminDashboard() {
-  const { navigate, user, refreshCounter } = useAppStore()
+  const { navigate, user, refreshCounter, socketConnected } = useAppStore()
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
@@ -179,11 +180,11 @@ export function AdminDashboard() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-[10px] text-slate-500">
               <motion.div
-                className="h-1.5 w-1.5 rounded-full bg-emerald-400"
+                className={`h-1.5 w-1.5 rounded-full ${socketConnected ? 'bg-emerald-400' : 'bg-amber-400'}`}
                 animate={{ opacity: [1, 0.4, 1] }}
                 transition={{ duration: 2, repeat: Infinity }}
               />
-              <span>Live · Auto-refreshing every 3s</span>
+              <span>{socketConnected ? 'Live · Real-time connected' : 'Live · Auto-refreshing every 3s'}</span>
             </div>
             <button
               onClick={() => { loadStats(); loadChartData() }}
