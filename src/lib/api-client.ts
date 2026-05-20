@@ -172,11 +172,13 @@ class ApiClient {
   }
 
   // ─── TOKENS ─────────────────────────────────────────
-  async getTokens(params?: { status?: string; queueId?: string; userId?: string }) {
+  async getTokens(params?: { status?: string; queueId?: string; userId?: string; page?: number; pageSize?: number }) {
     const query = new URLSearchParams()
     if (params?.status) query.set('status', params.status)
     if (params?.queueId) query.set('queueId', params.queueId)
     if (params?.userId) query.set('userId', params.userId)
+    if (params?.page) query.set('page', String(params.page))
+    if (params?.pageSize) query.set('pageSize', String(params.pageSize))
     const qs = query.toString()
     return this.request<{ items: AppToken[]; total: number }>(`/token${qs ? `?${qs}` : ''}`)
   }

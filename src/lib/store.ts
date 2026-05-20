@@ -135,6 +135,10 @@ interface AppState {
   sidebarOpen: boolean
   toggleSidebar: () => void
   setSidebarOpen: (open: boolean) => void
+
+  // Refresh trigger (increment to trigger re-fetches across all screens)
+  refreshCounter: number
+  triggerRefresh: () => void
 }
 
 export const useAppStore = create<AppState>()(
@@ -225,6 +229,10 @@ export const useAppStore = create<AppState>()(
       sidebarOpen: false,
       toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
+
+      // Refresh trigger
+      refreshCounter: 0,
+      triggerRefresh: () => set((state) => ({ refreshCounter: state.refreshCounter + 1 })),
     }),
     {
       name: 'queueSevaAuth',

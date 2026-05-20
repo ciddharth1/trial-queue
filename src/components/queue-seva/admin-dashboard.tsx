@@ -96,12 +96,28 @@ function MiniBarChart({ data, color = '#4F46E5' }: { data: number[]; color?: str
 }
 
 export function AdminDashboard() {
-  const { navigate, user } = useAppStore()
+  const { navigate, user, refreshCounter } = useAppStore()
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     loadStats()
+  }, [])
+
+  // Auto-refresh when refreshCounter changes (triggered by user/admin actions)
+  useEffect(() => {
+    if (refreshCounter > 0) {
+      loadStats()
+      loadChartData()
+    }
+  }, [refreshCounter])
+
+  // Auto-poll every 8 seconds for real-time updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadStats()
+    }, 8000)
+    return () => clearInterval(interval)
   }, [])
 
   const loadStats = async () => {

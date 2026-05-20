@@ -48,7 +48,7 @@ function generateLivePositions(tokenPosition: number, totalInQueue: number): Liv
 }
 
 export function LiveTrackerScreen() {
-  const { userTokens, selectedToken, navigate } = useAppStore()
+  const { userTokens, selectedToken, navigate, refreshCounter } = useAppStore()
   const [simulatedPosition, setSimulatedPosition] = useState<number | null>(null)
 
   const activeToken: AppToken | null = selectedToken || userTokens.find((t) => ['WAITING', 'CALLED'].includes(t.status)) || null

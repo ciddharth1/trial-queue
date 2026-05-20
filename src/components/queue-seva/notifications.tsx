@@ -30,12 +30,19 @@ function timeAgo(dateStr: string): string {
 }
 
 export function NotificationsScreen() {
-  const { user, notifications, setNotifications, unreadCount, setUnreadCount } = useAppStore()
+  const { user, notifications, setNotifications, unreadCount, setUnreadCount, refreshCounter } = useAppStore()
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     loadNotifications()
   }, [user?.id])
+
+  // Refresh when refreshCounter changes
+  useEffect(() => {
+    if (refreshCounter > 0) {
+      loadNotifications()
+    }
+  }, [refreshCounter])
 
   const loadNotifications = async () => {
     if (!user) return

@@ -27,7 +27,7 @@ interface DailyData {
 }
 
 export function AdminAnalyticsScreen() {
-  const { navigate } = useAppStore()
+  const { navigate, refreshCounter } = useAppStore()
   const [loading, setLoading] = useState(true)
   const [analytics, setAnalytics] = useState<any>(null)
   const [weeklyData, setWeeklyData] = useState<DailyData[]>([])
@@ -35,6 +35,13 @@ export function AdminAnalyticsScreen() {
   useEffect(() => {
     loadAnalytics()
   }, [])
+
+  // Refresh when refreshCounter changes
+  useEffect(() => {
+    if (refreshCounter > 0) {
+      loadAnalytics()
+    }
+  }, [refreshCounter])
 
   const loadAnalytics = async () => {
     setLoading(true)

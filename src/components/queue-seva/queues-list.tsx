@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 
 export function QueuesListScreen() {
-  const { navigate, setSelectedQueue, queues, setQueues } = useAppStore()
+  const { navigate, setSelectedQueue, queues, setQueues, refreshCounter } = useAppStore()
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [loading, setLoading] = useState(true)
@@ -19,6 +19,13 @@ export function QueuesListScreen() {
   useEffect(() => {
     loadQueues()
   }, [statusFilter])
+
+  // Refresh when refreshCounter changes
+  useEffect(() => {
+    if (refreshCounter > 0) {
+      loadQueues()
+    }
+  }, [refreshCounter])
 
   const loadQueues = async () => {
     setLoading(true)

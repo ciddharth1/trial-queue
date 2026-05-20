@@ -12,12 +12,14 @@ import {
   QrCode,
   Zap,
   Timer,
+  LogOut,
 } from 'lucide-react'
 import { useAppStore, type AppQueue, type AppToken } from '@/lib/store'
 import { apiClient } from '@/lib/api-client'
 import { Header } from './header'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { toast } from 'sonner'
 
 function formatWaitTime(seconds: number | null): string {
   if (!seconds) return '--'
@@ -118,13 +120,23 @@ function QueueCard({ queue, onJoin, onView }: { queue: AppQueue; onJoin: (q: App
   )
 }
 
-function ActiveTokenCard({ token }: { token: AppToken }) {
+function ActiveTokenCard({ token, onLeave }: { token: AppToken; onLeave: (token: AppToken) => void }) {
+  const [leaving, setLeaving] = useState(false)
   const statusConfig: Record<string, { color: string; bg: string; label: string }> = {
     WAITING: { color: 'text-amber-400', bg: 'bg-amber-500/10', label: 'Waiting' },
     CALLED: { color: 'text-[#4F46E5]', bg: 'bg-[#4F46E5]/10', label: 'Called!' },
     SERVING: { color: 'text-emerald-400', bg: 'bg-emerald-500/10', label: 'Being Served' },
   }
   const config = statusConfig[token.status] || statusConfig.WAITING
+
+  const handleLeave = async () => {
+    setLeaving(true)
+    try {
+      await onLeave(token)
+    } finally {
+      setLeaving(false)
+    }
+  }
 
   return (
     <motion.div
@@ -157,16 +169,43 @@ function ActiveTokenCard({ token }: { token: AppToken }) {
           )}
         </div>
       </div>
+      {token.status === 'WAITING' && (
+        <Button
+          onClick={handleLeave}
+          disabled={leaving}
+          variant="outline"
+          size="sm"
+          className="h-8 border-red-500/30 bg-red-500/5 text-[10px] text-red-400 hover:bg-red-500/10 hover:border-red-500/50"
+        >
+          <LogOut className="mr-1 h-3 w-3" />
+          {leaving ? '...' : 'Leave'}
+        </Button>
+      )}
     </motion.div>
   )
 }
 
 export function UserDashboard() {
-  const { user, navigate, setSelectedQueue, setQueues, queues, userTokens, setUserTokens } = useAppStore()
+  const { user, navigate, setSelectedQueue, setQueues, queues, userTokens, setUserTokens, refreshCounter } = useAppStore()
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     loadData()
+  }, [])
+
+  // Refresh when refreshCounter changes (triggered by admin actions or other screens)
+  useEffect(() => {
+    if (refreshCounter > 0) {
+      loadData()
+    }
+  }, [refreshCounter])
+
+  // Auto-poll every 10 seconds for real-time updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadData()
+    }, 10000)
+    return () => clearInterval(interval)
   }, [])
 
   const loadData = async () => {
@@ -198,6 +237,23 @@ export function UserDashboard() {
   const handleViewQueue = (queue: AppQueue) => {
     setSelectedQueue(queue)
     navigate('queue-detail')
+  }
+
+  const handleLeaveQueue = async (token: AppToken) => {
+    try {
+      const result = await apiClient.leaveQueue(token.queueId)
+      if (result.success) {
+        toast.success('You have left the queue')
+        setUserTokens(useAppStore.getState().userTokens.filter(t => t.id !== token.id))
+        useAppStore.getState().triggerRefresh()
+        loadData()
+      } else {
+        toast.error(result.error || 'Failed to leave queue')
+      }
+    } catch (error) {
+      console.error('Failed to leave queue:', error)
+      toast.error('Failed to leave queue')
+    }
   }
 
   const activeTokens = userTokens.filter((t) => ['WAITING', 'CALLED', 'SERVING'].includes(t.status))
@@ -257,7 +313,7 @@ export function UserDashboard() {
               </div>
               <div className="space-y-3">
                 {activeTokens.map((token) => (
-                  <ActiveTokenCard key={token.id} token={token} />
+                  <ActiveTokenCard key={token.id} token={token} onLeave={handleLeaveQueue} />
                 ))}
               </div>
             </motion.div>

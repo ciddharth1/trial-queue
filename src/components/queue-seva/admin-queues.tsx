@@ -14,6 +14,8 @@ import {
   CheckCircle2,
   Settings,
   Trash2,
+  PhoneIncoming,
+  CheckCircle,
 } from 'lucide-react'
 import { useAppStore, type AppQueue } from '@/lib/store'
 import { apiClient } from '@/lib/api-client'
@@ -24,17 +26,40 @@ import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 
 export function AdminQueuesScreen() {
-  const { navigate, setSelectedQueue, setQueues } = useAppStore()
+  const { navigate, setSelectedQueue, setQueues, refreshCounter } = useAppStore()
   const [searchQuery, setSearchQuery] = useState('')
   const [showCreate, setShowCreate] = useState(false)
   const [newQueue, setNewQueue] = useState({ name: '', prefix: '', maxCapacity: 100, description: '' })
   const [creating, setCreating] = useState(false)
   const [queuesList, setQueuesList] = useState<(AppQueue & { waiting?: number; serving?: number; completed?: number })[]>([])
   const [loading, setLoading] = useState(true)
+  const [serviceCenterId, setServiceCenterId] = useState<string | null>(null)
 
   useEffect(() => {
+    loadServiceCenter()
     loadQueues()
   }, [])
+
+  // Refresh when refreshCounter changes (triggered by user/admin actions)
+  useEffect(() => {
+    if (refreshCounter > 0) {
+      loadQueues()
+    }
+  }, [refreshCounter])
+
+  const loadServiceCenter = async () => {
+    try {
+      const result = await apiClient.getServiceCenters()
+      if (result.success && result.data) {
+        const items = (result.data as any).items || result.data
+        if (Array.isArray(items) && items.length > 0) {
+          setServiceCenterId(items[0].id)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load service centers:', error)
+    }
+  }
 
   const loadQueues = async () => {
     setLoading(true)
@@ -59,13 +84,17 @@ export function AdminQueuesScreen() {
 
   const handleCreateQueue = async () => {
     if (!newQueue.name || !newQueue.prefix) return
+    if (!serviceCenterId) {
+      toast.error('No service center available. Please create one first.')
+      return
+    }
     setCreating(true)
     try {
       const result = await apiClient.createQueue({
         name: newQueue.name,
         prefix: newQueue.prefix.toUpperCase(),
         maxCapacity: newQueue.maxCapacity,
-        serviceCenterId: '1',
+        serviceCenterId: serviceCenterId,
         description: newQueue.description,
       })
       if (result.success) {
@@ -73,6 +102,7 @@ export function AdminQueuesScreen() {
         setNewQueue({ name: '', prefix: '', maxCapacity: 100, description: '' })
         toast.success('Queue created successfully!')
         loadQueues()
+        useAppStore.getState().triggerRefresh()
       } else {
         toast.error(result.error || 'Failed to create queue')
       }
@@ -90,12 +120,68 @@ export function AdminQueuesScreen() {
       if (result.success) {
         toast.success(`Queue ${newStatus === 'ACTIVE' ? 'resumed' : newStatus === 'PAUSED' ? 'paused' : 'closed'} successfully!`)
         loadQueues()
+        useAppStore.getState().triggerRefresh()
       } else {
         toast.error(result.error || 'Failed to update queue')
       }
     } catch (error) {
       console.error('Failed to update queue:', error)
       toast.error('Failed to update queue status')
+    }
+  }
+
+  const handleCallNext = async (queueId: string) => {
+    try {
+      // Get the first WAITING token for this queue
+      const tokensRes = await apiClient.getTokens({ queueId, status: 'WAITING', pageSize: 50 })
+      if (tokensRes.success && tokensRes.data) {
+        const items = (tokensRes.data as any).items || tokensRes.data
+        const waitingTokens = Array.isArray(items) ? items : []
+        if (waitingTokens.length === 0) {
+          toast.info('No waiting tokens in this queue')
+          return
+        }
+        // Call the first waiting token
+        const nextToken = waitingTokens[0]
+        const result = await apiClient.updateToken(nextToken.id, { status: 'CALLED' })
+        if (result.success) {
+          toast.success(`Token ${nextToken.tokenNumber} has been called!`)
+          loadQueues()
+          useAppStore.getState().triggerRefresh()
+        } else {
+          toast.error(result.error || 'Failed to call next token')
+        }
+      }
+    } catch (error) {
+      console.error('Failed to call next token:', error)
+      toast.error('Failed to call next token')
+    }
+  }
+
+  const handleCompleteCurrent = async (queueId: string) => {
+    try {
+      // Get the first CALLED/SERVING token for this queue
+      const tokensRes = await apiClient.getTokens({ queueId, pageSize: 50 })
+      if (tokensRes.success && tokensRes.data) {
+        const items = (tokensRes.data as any).items || tokensRes.data
+        const allTokens = Array.isArray(items) ? items : []
+        const activeToken = allTokens.find((t: any) => t.status === 'CALLED' || t.status === 'SERVING')
+        if (!activeToken) {
+          toast.info('No active token to complete')
+          return
+        }
+        const result = await apiClient.updateToken(activeToken.id, { status: 'COMPLETED' })
+        if (result.success) {
+          toast.success(`Token ${activeToken.tokenNumber} marked as completed!`)
+          loadQueues()
+          useAppStore.getState().triggerRefresh()
+        } else {
+          toast.error(result.error || 'Failed to complete token')
+        }
+      }
+    } catch (error) {
+      console.error('Failed to complete token:', error)
+      toast.error('Failed to complete token')
     }
   }
 
@@ -264,11 +350,31 @@ export function AdminQueuesScreen() {
                         </span>
                         <span className="flex items-center gap-1 text-emerald-400">
                           <CheckCircle2 className="h-3 w-3" />
-                          {queue.completed ?? queue.currentLength} served
+                          {queue.waitingCount ?? 0} waiting
                         </span>
                       </div>
                     </div>
                     <div className="flex items-center gap-1.5">
+                      {queue.status === 'ACTIVE' && (
+                        <>
+                          <button
+                            onClick={() => handleCallNext(queue.id)}
+                            className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[10px] font-medium text-[#4F46E5] transition-colors hover:bg-[#4F46E5]/10"
+                            title="Call Next Token"
+                          >
+                            <PhoneIncoming className="h-3.5 w-3.5" />
+                            <span className="hidden sm:inline">Call Next</span>
+                          </button>
+                          <button
+                            onClick={() => handleCompleteCurrent(queue.id)}
+                            className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[10px] font-medium text-emerald-400 transition-colors hover:bg-emerald-500/10"
+                            title="Complete Current Token"
+                          >
+                            <CheckCircle className="h-3.5 w-3.5" />
+                            <span className="hidden sm:inline">Complete</span>
+                          </button>
+                        </>
+                      )}
                       {(statusActions[queue.status] || []).map((action) => (
                         <button
                           key={action.label}

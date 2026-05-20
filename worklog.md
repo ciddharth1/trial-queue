@@ -78,3 +78,29 @@ Stage Summary:
 - Key architectural fix: join/leave now use JWT-based auth instead of client-sent userId (more secure)
 - Users can now rejoin queues after leaving (unique constraint fix)
 - Analytics endpoint works both with and without queueId parameter
+---
+Task ID: 1
+Agent: Main
+Task: Fix bugs in QueueSeva website - real-time sync between user/admin panels, fix broken features
+
+Work Log:
+- Created `/src/hooks/use-realtime.ts` - Global refresh event system with polling and event-based refresh
+- Added `refreshCounter` and `triggerRefresh()` to Zustand store for cross-screen data sync
+- Fixed admin-queues.tsx: replaced hardcoded `serviceCenterId='1'` with dynamic service center lookup
+- Fixed admin-queues.tsx: corrected wrong "served" count display to show "waiting" count from API
+- Fixed admin analytics route: added support for `days` query parameter from client
+- Added auto-refresh (8-10s polling) to admin-dashboard, user-dashboard for real-time updates
+- Added `refreshCounter`-based refresh to all screens: admin-queues, queues-list, queue-detail, notifications, admin-analytics, live-tracker
+- Added "Call Next" and "Complete" token management buttons to admin-queues screen
+- Added "Leave Queue" button to token-display screen (shows when token is WAITING)
+- Added "Leave Queue" button to active token cards in user-dashboard
+- Fixed token list API: waiting tokens now sorted by sequenceNum ascending (first-in-first-out)
+- Added pageSize/page parameters to getTokens API client method
+- Added `triggerRefresh()` calls to all mutation actions (join queue, leave queue, create queue, status change) so all screens update in parallel
+
+Stage Summary:
+- Real-time sync between admin and user panels implemented via Zustand refreshCounter + auto-polling
+- When a user joins/leaves a queue, admin dashboard auto-refreshes within 8 seconds
+- When admin calls/completes a token, user dashboard auto-refreshes within 10 seconds
+- All broken features fixed: serviceCenterId, served count, analytics days param
+- New features added: Call Next Token, Complete Token, Leave Queue buttons

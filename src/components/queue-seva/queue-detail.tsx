@@ -25,7 +25,7 @@ import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 
 export function QueueDetailScreen() {
-  const { selectedQueue, navigate, goBack, user, setUserTokens, setSelectedToken } = useAppStore()
+  const { selectedQueue, navigate, goBack, user, setUserTokens, setSelectedToken, refreshCounter } = useAppStore()
   const [queue, setQueue] = useState<AppQueue | null>(selectedQueue)
   const [tokens, setTokens] = useState<AppToken[]>([])
   const [loading, setLoading] = useState(false)
@@ -36,6 +36,13 @@ export function QueueDetailScreen() {
       loadQueueDetail()
     }
   }, [selectedQueue?.id])
+
+  // Refresh when refreshCounter changes (other users/admins made changes)
+  useEffect(() => {
+    if (refreshCounter > 0 && selectedQueue?.id) {
+      loadQueueDetail()
+    }
+  }, [refreshCounter])
 
   const loadQueueDetail = async () => {
     if (!selectedQueue?.id) return
@@ -67,6 +74,10 @@ export function QueueDetailScreen() {
         token.queueName = queue.name
         setSelectedToken(token)
         setUserTokens([...useAppStore.getState().userTokens, token])
+        // Refresh queue detail to show updated currentLength
+        await loadQueueDetail()
+        // Trigger global refresh so admin and other screens update
+        useAppStore.getState().triggerRefresh()
         navigate('token-display')
       }
     } catch (error) {

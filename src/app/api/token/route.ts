@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
             select: { id: true, name: true, label: true },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: status === 'WAITING' ? { sequenceNum: 'asc' } : { createdAt: 'desc' },
         skip,
         take: pageSize,
       }),

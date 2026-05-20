@@ -1,10 +1,13 @@
 'use client'
 
+import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Clock, ListOrdered, ArrowRight, CheckCircle2, Bell, Timer } from 'lucide-react'
+import { Clock, ListOrdered, ArrowRight, CheckCircle2, Bell, Timer, LogOut, Loader2 } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
+import { apiClient } from '@/lib/api-client'
 import { Header } from './header'
 import { Button } from '@/components/ui/button'
+import { toast } from 'sonner'
 
 function formatWaitTime(seconds: number | null): string {
   if (!seconds) return '--'
@@ -17,10 +20,33 @@ function formatWaitTime(seconds: number | null): string {
 }
 
 export function TokenDisplayScreen() {
-  const { selectedToken, navigate, selectedQueue } = useAppStore()
-  // Note: selectedToken might be from userTokens or a freshly joined token
+  const { selectedToken, navigate, selectedQueue, setUserTokens, userTokens, triggerRefresh } = useAppStore()
+  const [leaving, setLeaving] = useState(false)
 
   const token = selectedToken
+
+  const handleLeaveQueue = async () => {
+    if (!token) return
+    setLeaving(true)
+    try {
+      const result = await apiClient.leaveQueue(token.queueId)
+      if (result.success) {
+        toast.success('You have left the queue')
+        // Remove this token from user tokens
+        setUserTokens(userTokens.filter(t => t.id !== token.id))
+        // Trigger global refresh so admin and other screens update
+        triggerRefresh()
+        navigate('dashboard')
+      } else {
+        toast.error(result.error || 'Failed to leave queue')
+      }
+    } catch (error) {
+      console.error('Failed to leave queue:', error)
+      toast.error('Failed to leave queue')
+    } finally {
+      setLeaving(false)
+    }
+  }
 
   if (!token) {
     return (
@@ -136,6 +162,25 @@ export function TokenDisplayScreen() {
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </motion.div>
+
+          {/* Leave Queue Button */}
+          {isWaiting && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.65 }}
+            >
+              <Button
+                onClick={handleLeaveQueue}
+                disabled={leaving}
+                variant="outline"
+                className="h-11 w-full border-red-500/30 bg-red-500/5 text-sm font-medium text-red-400 hover:bg-red-500/10 hover:border-red-500/50 hover:text-red-300"
+              >
+                {leaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogOut className="mr-2 h-4 w-4" />}
+                {leaving ? 'Leaving Queue...' : 'Leave Queue'}
+              </Button>
+            </motion.div>
+          )}
 
           {/* Info cards */}
           <motion.div

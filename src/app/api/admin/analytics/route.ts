@@ -12,26 +12,37 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const queueId = searchParams.get('queueId')
     const dateRange = searchParams.get('dateRange') || '7d' // 1d, 7d, 30d, 90d
+    const daysParam = searchParams.get('days') // Support numeric days parameter
 
     // Calculate date range
     const endDate = new Date()
     const startDate = new Date()
 
-    switch (dateRange) {
-      case '1d':
-        startDate.setDate(startDate.getDate() - 1)
-        break
-      case '7d':
+    if (daysParam) {
+      // If numeric days parameter is provided, use it directly
+      const days = parseInt(daysParam)
+      if (!isNaN(days) && days > 0) {
+        startDate.setDate(startDate.getDate() - days)
+      } else {
         startDate.setDate(startDate.getDate() - 7)
-        break
-      case '30d':
-        startDate.setDate(startDate.getDate() - 30)
-        break
-      case '90d':
-        startDate.setDate(startDate.getDate() - 90)
-        break
-      default:
-        startDate.setDate(startDate.getDate() - 7)
+      }
+    } else {
+      switch (dateRange) {
+        case '1d':
+          startDate.setDate(startDate.getDate() - 1)
+          break
+        case '7d':
+          startDate.setDate(startDate.getDate() - 7)
+          break
+        case '30d':
+          startDate.setDate(startDate.getDate() - 30)
+          break
+        case '90d':
+          startDate.setDate(startDate.getDate() - 90)
+          break
+        default:
+          startDate.setDate(startDate.getDate() - 7)
+      }
     }
 
     const where: Record<string, unknown> = {
