@@ -107,47 +107,9 @@ export function AdminDashboard() {
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
   const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  const loadStats = useCallback(async () => {
-    try {
-      const result = await apiClient.getAdminStats()
-      if (result.success && result.data) {
-        setStats(result.data as AdminStats)
-        setLastRefresh(new Date())
-      }
-    } catch (error) {
-      console.error('Failed to load admin stats:', error)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    loadStats()
-  }, [])
-
-  // Auto-refresh when refreshCounter changes (triggered by user/admin actions)
-  useEffect(() => {
-    if (refreshCounter > 0) {
-      loadStats()
-      loadChartData()
-    }
-  }, [refreshCounter])
-
-  // Faster auto-poll every 3 seconds for real-time updates
-  useEffect(() => {
-    const interval = setInterval(() => {
-      loadStats()
-    }, 3000)
-    return () => clearInterval(interval)
-  }, [])
-
   // Load analytics data for charts
   const [hourlyData, setHourlyData] = useState([12, 19, 8, 25, 32, 28, 45, 52, 38, 42, 35, 28])
   const [dailyData, setDailyData] = useState([120, 145, 132, 168, 155, 142, 178, 190, 165, 185, 170, 195])
-
-  useEffect(() => {
-    loadChartData()
-  }, [])
 
   const loadChartData = useCallback(async () => {
     try {
@@ -163,6 +125,42 @@ export function AdminDashboard() {
       console.error('Failed to load chart data:', error)
     }
   }, [])
+
+  const loadStats = useCallback(async () => {
+    try {
+      const result = await apiClient.getAdminStats()
+      if (result.success && result.data) {
+        setStats(result.data as AdminStats)
+        setLastRefresh(new Date())
+      }
+    } catch (error) {
+      console.error('Failed to load admin stats:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  // Initial load
+  useEffect(() => {
+    loadStats()
+    loadChartData()
+  }, [])
+
+  // Auto-refresh when refreshCounter changes (triggered by user/admin actions)
+  useEffect(() => {
+    if (refreshCounter > 0) {
+      loadStats()
+      loadChartData()
+    }
+  }, [refreshCounter, loadStats, loadChartData])
+
+  // Auto-poll every 3 seconds for real-time updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadStats()
+    }, 3000)
+    return () => clearInterval(interval)
+  }, [loadStats])
 
   // Recent tokens display
   const recentTokens = stats?.recentTokens || []

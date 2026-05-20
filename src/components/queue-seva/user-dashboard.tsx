@@ -200,10 +200,12 @@ export function UserDashboard() {
       ])
 
       if (queuesRes.success && queuesRes.data) {
-        setQueues(queuesRes.data.items || [])
+        const queueItems = (queuesRes.data as any).items || queuesRes.data
+        setQueues(Array.isArray(queueItems) ? queueItems : [])
       }
       if (tokensRes?.success && tokensRes.data) {
-        setUserTokens(tokensRes.data.items || [])
+        const tokenItems = (tokensRes.data as any).items || tokensRes.data
+        setUserTokens(Array.isArray(tokenItems) ? tokenItems : [])
       }
     } catch (error) {
       console.error('Failed to load dashboard data:', error)

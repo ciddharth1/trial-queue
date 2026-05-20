@@ -17,6 +17,7 @@ class SocketManager {
   private maxReconnectAttempts = 10
   private listeners: Map<string, Set<EventHandler>> = new Map()
   private isConnected = false
+  private pendingEmitQueue: { event: string; data: any }[] = []
 
   /**
    * Connect to the Socket.io server with a JWT token
@@ -54,6 +55,14 @@ class SocketManager {
       this.reconnectAttempts = 0
       console.log('[Socket] Connected:', this.socket?.id)
       this.emitToListeners('socket:connected', { socketId: this.socket?.id })
+
+      // Flush any pending emit queue
+      while (this.pendingEmitQueue.length > 0) {
+        const pending = this.pendingEmitQueue.shift()!
+        if (this.socket?.connected) {
+          this.socket.emit(pending.event, pending.data)
+        }
+      }
     })
 
     this.socket.on('disconnect', (reason) => {
@@ -105,6 +114,7 @@ class SocketManager {
       this.socket = null
       this.isConnected = false
       this.token = null
+      this.pendingEmitQueue = []
     }
   }
 
@@ -126,6 +136,7 @@ class SocketManager {
 
   /**
    * Notify that a token was created (called after joining a queue)
+   * Uses queueing to ensure the event is sent even if socket is temporarily disconnected
    */
   emitTokenCreated(data: {
     queueId: string
@@ -135,11 +146,16 @@ class SocketManager {
     position: number
     estimatedWaitMinutes?: number
   }) {
-    if (!this.socket?.connected) return
-    this.socket.emit('token:created', {
+    const payload = {
       ...data,
       timestamp: new Date().toISOString(),
-    })
+    }
+    if (this.socket?.connected) {
+      this.socket.emit('token:created', payload)
+    } else {
+      // Queue the event to be sent on reconnection
+      this.pendingEmitQueue.push({ event: 'token:created', data: payload })
+    }
   }
 
   /**
@@ -153,11 +169,15 @@ class SocketManager {
     counterName: string
     userId?: string
   }) {
-    if (!this.socket?.connected) return
-    this.socket.emit('token:called', {
+    const payload = {
       ...data,
       timestamp: new Date().toISOString(),
-    })
+    }
+    if (this.socket?.connected) {
+      this.socket.emit('token:called', payload)
+    } else {
+      this.pendingEmitQueue.push({ event: 'token:called', data: payload })
+    }
   }
 
   /**
@@ -171,11 +191,15 @@ class SocketManager {
     counterName: string
     userId?: string
   }) {
-    if (!this.socket?.connected) return
-    this.socket.emit('token:serving', {
+    const payload = {
       ...data,
       timestamp: new Date().toISOString(),
-    })
+    }
+    if (this.socket?.connected) {
+      this.socket.emit('token:serving', payload)
+    } else {
+      this.pendingEmitQueue.push({ event: 'token:serving', data: payload })
+    }
   }
 
   /**
@@ -189,11 +213,15 @@ class SocketManager {
     counterName: string
     userId?: string
   }) {
-    if (!this.socket?.connected) return
-    this.socket.emit('token:completed', {
+    const payload = {
       ...data,
       timestamp: new Date().toISOString(),
-    })
+    }
+    if (this.socket?.connected) {
+      this.socket.emit('token:completed', payload)
+    } else {
+      this.pendingEmitQueue.push({ event: 'token:completed', data: payload })
+    }
   }
 
   /**
@@ -205,11 +233,15 @@ class SocketManager {
     tokenNumber: string
     reason: 'TIMEOUT' | 'NO_SHOW' | 'CANCELLED'
   }) {
-    if (!this.socket?.connected) return
-    this.socket.emit('token:expired', {
+    const payload = {
       ...data,
       timestamp: new Date().toISOString(),
-    })
+    }
+    if (this.socket?.connected) {
+      this.socket.emit('token:expired', payload)
+    } else {
+      this.pendingEmitQueue.push({ event: 'token:expired', data: payload })
+    }
   }
 
   /**
@@ -220,12 +252,16 @@ class SocketManager {
     organizationId: string
     updateType: 'QUEUE_UPDATED' | 'QUEUE_PAUSED' | 'QUEUE_RESUMED' | 'QUEUE_CLOSED'
   }) {
-    if (!this.socket?.connected) return
-    this.socket.emit('queue:update', {
+    const payload = {
       ...data,
       data: {},
       timestamp: new Date().toISOString(),
-    })
+    }
+    if (this.socket?.connected) {
+      this.socket.emit('queue:update', payload)
+    } else {
+      this.pendingEmitQueue.push({ event: 'queue:update', data: payload })
+    }
   }
 
   /**

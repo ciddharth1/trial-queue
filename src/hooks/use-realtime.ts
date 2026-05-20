@@ -48,12 +48,16 @@ if (typeof window !== 'undefined') {
         const handlers = listeners.get('global') || new Set()
         handlers.forEach((handler) => handler(type))
 
-        // Update the Zustand refresh counter (synchronous)
+        // Also emit to 'all-listeners'
+        if (type !== 'all') {
+          const allHandlers = listeners.get('all-listeners') || new Set()
+          allHandlers.forEach((handler) => handler(type))
+        }
+
+        // Update the Zustand refresh counter (synchronous via direct import)
         try {
-          const { useAppStore } = require('@/lib/store')
-          const store = useAppStore.getState()
-          store.triggerRefresh()
-          store.setSocketConnected(true)
+          useAppStore.getState().triggerRefresh()
+          useAppStore.getState().setSocketConnected(true)
         } catch {
           // Store might not be ready yet
         }
@@ -71,7 +75,6 @@ let socketInitialized = false
 
 function triggerStoreRefresh() {
   try {
-    const { useAppStore } = require('@/lib/store')
     useAppStore.getState().triggerRefresh()
   } catch {
     // Store might not be ready yet
@@ -122,14 +125,12 @@ function initializeSocketListeners() {
   // Socket connection status
   socketManager.on('socket:connected', () => {
     try {
-      const { useAppStore } = require('@/lib/store')
       useAppStore.getState().setSocketConnected(true)
     } catch {}
   })
 
   socketManager.on('socket:disconnected', () => {
     try {
-      const { useAppStore } = require('@/lib/store')
       useAppStore.getState().setSocketConnected(false)
     } catch {}
   })
