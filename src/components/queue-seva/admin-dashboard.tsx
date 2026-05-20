@@ -140,13 +140,15 @@ export function AdminDashboard() {
     }
   }, [])
 
-  // Initial load
+  // Initial load - always fetch fresh data on mount
   useEffect(() => {
+    setLoading(true)
     loadStats()
     loadChartData()
   }, [])
 
   // Auto-refresh when refreshCounter changes (triggered by user/admin actions)
+  // This is the primary real-time sync mechanism within the same tab
   useEffect(() => {
     if (refreshCounter > 0) {
       loadStats()
@@ -154,13 +156,14 @@ export function AdminDashboard() {
     }
   }, [refreshCounter, loadStats, loadChartData])
 
-  // Auto-poll every 3 seconds for real-time updates
+  // Auto-poll every 2 seconds for real-time updates (faster polling for better sync)
   useEffect(() => {
     const interval = setInterval(() => {
       loadStats()
-    }, 3000)
+      loadChartData()
+    }, 2000)
     return () => clearInterval(interval)
-  }, [loadStats])
+  }, [loadStats, loadChartData])
 
   // Recent tokens display
   const recentTokens = stats?.recentTokens || []

@@ -6,7 +6,30 @@ import { io, Socket } from 'socket.io-client'
 // Socket.io Client for Queue Seva Real-Time Updates
 // ============================================================================
 
-const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3003'
+// Dynamically determine socket URL based on current page hostname
+// This ensures it works both locally and in the z.ai preview environment
+function getSocketUrl(): string {
+  if (typeof window !== 'undefined') {
+    const envUrl = process.env.NEXT_PUBLIC_SOCKET_URL
+    if (envUrl) {
+      // If env URL is localhost, try to use the current hostname instead
+      // (for z.ai preview where localhost:3003 is not reachable from browser)
+      try {
+        const envParsed = new URL(envUrl)
+        if (envParsed.hostname === 'localhost' && window.location.hostname !== 'localhost') {
+          // Replace localhost with current hostname, keep the port
+          return `${envParsed.protocol}//${window.location.hostname}:${envParsed.port}`
+        }
+      } catch {
+        // Invalid URL, fall through
+      }
+      return envUrl
+    }
+  }
+  return 'http://localhost:3003'
+}
+
+const SOCKET_URL = getSocketUrl()
 
 type EventHandler = (...args: any[]) => void
 
@@ -38,10 +61,12 @@ class SocketManager {
       auth: { token: accessToken },
       transports: ['websocket', 'polling'],
       reconnection: true,
-      reconnectionAttempts: this.maxReconnectAttempts,
+      reconnectionAttempts: Infinity, // Keep trying to reconnect
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
-      timeout: 10000,
+      timeout: 15000,
+      upgrade: true,
+      rememberUpgrade: true,
     })
 
     this.setupEventHandlers()
@@ -53,7 +78,7 @@ class SocketManager {
     this.socket.on('connect', () => {
       this.isConnected = true
       this.reconnectAttempts = 0
-      console.log('[Socket] Connected:', this.socket?.id)
+      console.log('[Socket] Connected:', this.socket?.id, 'URL:', SOCKET_URL)
       this.emitToListeners('socket:connected', { socketId: this.socket?.id })
 
       // Flush any pending emit queue
@@ -73,8 +98,16 @@ class SocketManager {
 
     this.socket.on('connect_error', (error) => {
       this.reconnectAttempts++
-      console.warn('[Socket] Connection error:', error.message)
+      // Only log every 5th attempt to reduce noise
+      if (this.reconnectAttempts <= 3 || this.reconnectAttempts % 5 === 0) {
+        console.warn('[Socket] Connection error (attempt ' + this.reconnectAttempts + '):', error.message)
+      }
       this.emitToListeners('socket:error', { error: error.message })
+    })
+
+    // Handle connection acknowledgment from server
+    this.socket.on('connection:ack', (data) => {
+      console.log('[Socket] Server acknowledgment:', data)
     })
 
     // Queue events

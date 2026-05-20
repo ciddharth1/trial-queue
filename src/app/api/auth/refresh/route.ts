@@ -44,6 +44,7 @@ export async function POST(request: NextRequest) {
       userId: session.user.id,
       email: session.user.email,
       role: session.user.role,
+      name: session.user.name,
     })
 
     // Update session token

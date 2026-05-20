@@ -38,6 +38,7 @@ export async function POST(request: NextRequest) {
       userId: user.id,
       email: user.email,
       role: user.role,
+      name: user.name,
     })
 
     // Delete existing sessions for this user (to avoid unique constraint issues)
