@@ -63,3 +63,22 @@ dev.log
 dev.out.log
 server.log
 push-to-github.py
+
+# Database files
+db/*.db
+prisma/db/*.db
+
+# Agent context
+agent-ctx/
+
+# Uploads
+upload/
+
+# Download (generated)
+download/
+
+# Examples (not part of main project)
+examples/
+
+# Z scripts
+.zscripts/
