@@ -52,3 +52,13 @@ prompt
 server.log
 # Skills directory
 /skills/
+# Build and deployment
+/agent-ctx/
+/download/
+/upload/
+/mini-services/socket-service/node_modules/
+git-ssh-helper.py
+worklog.md
+dev.log
+dev.out.log
+server.log
