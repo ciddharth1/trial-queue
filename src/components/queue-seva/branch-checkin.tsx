@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   MapPin,
@@ -36,6 +36,9 @@ export function BranchCheckinScreen() {
   const [availableQueues, setAvailableQueues] = useState<AppQueue[]>([])
   const [scanResult, setScanResult] = useState<{ queueId: string; queueName: string } | null>(null)
 
+  // Pre-generate QR pattern to avoid Math.random() in render
+  const qrPattern = useMemo(() => Array.from({ length: 64 }, () => Math.random() > 0.4), [])
+
   // Load available queues
   useEffect(() => {
     const loadQueues = async () => {
@@ -65,31 +68,26 @@ export function BranchCheckinScreen() {
     return () => clearTimeout(timer)
   }, [scanning, availableQueues])
 
-  // PIN pad handler
-  const handlePinPress = useCallback((key: string) => {
-    setError(null)
-    if (key === 'backspace') {
-      setPinCode(prev => prev.slice(0, -1))
-    } else if (key === 'enter') {
-      handleManualJoin()
-    } else if (pinCode.length < 6) {
-      setPinCode(prev => prev + key)
-    }
-  }, [pinCode])
+  // Use refs for stable access in callbacks
+  const pinCodeRef = useRef(pinCode)
+  pinCodeRef.current = pinCode
+  const availableQueuesRef = useRef(availableQueues)
+  availableQueuesRef.current = availableQueues
 
-  // Manual code join
-  const handleManualJoin = async () => {
-    if (!pinCode.trim() || pinCode.length < 1) {
+  // Manual code join - using refs to avoid stale closures
+  const handleManualJoin = useCallback(async () => {
+    const currentPin = pinCodeRef.current
+    if (!currentPin.trim() || currentPin.length < 1) {
       setError('Please enter a valid queue code')
       return
     }
     try {
-      const result = await apiClient.getQueue(pinCode.trim())
+      const result = await apiClient.getQueue(currentPin.trim())
       if (result.success && result.data) {
         setSelectedQueue(result.data as any)
         navigate('queue-detail')
       } else {
-        const firstQueue = availableQueues[0]
+        const firstQueue = availableQueuesRef.current[0]
         if (firstQueue) {
           setSelectedQueue(firstQueue)
           navigate('queue-detail')
@@ -100,7 +98,19 @@ export function BranchCheckinScreen() {
     } catch {
       setError('Failed to find queue. Please try again.')
     }
-  }
+  }, [setSelectedQueue, navigate])
+
+  // PIN pad handler
+  const handlePinPress = useCallback((key: string) => {
+    setError(null)
+    if (key === 'backspace') {
+      setPinCode(prev => prev.slice(0, -1))
+    } else if (key === 'enter') {
+      handleManualJoin()
+    } else {
+      setPinCode(prev => prev.length < 6 ? prev + key : prev)
+    }
+  }, [handleManualJoin])
 
   // Join scanned queue
   const handleJoinScanned = async () => {
@@ -243,10 +253,10 @@ export function BranchCheckinScreen() {
                       {/* QR Code pattern */}
                       <div className="w-48 h-48 md:w-56 md:h-56 opacity-80 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                         <div className="grid grid-cols-8 grid-rows-8 gap-1.5 w-40 h-40">
-                          {Array.from({ length: 64 }).map((_, i) => (
+                          {qrPattern.map((filled, i) => (
                             <div
                               key={i}
-                              className={`rounded-sm ${Math.random() > 0.4 ? 'bg-on-surface/80' : 'bg-transparent'}`}
+                              className={`rounded-sm ${filled ? 'bg-on-surface/80' : 'bg-transparent'}`}
                             />
                           ))}
                         </div>

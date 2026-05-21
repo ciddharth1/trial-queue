@@ -2,7 +2,6 @@ import { NextRequest } from 'next/server'
 import { db } from '@/lib/db'
 import { authenticateRequest } from '@/lib/auth'
 import { successResponse, errorResponse } from '@/lib/api-response'
-import { recalculatePositions } from '@/lib/queue-utils'
 import { broadcastTokenExpired, broadcastQueueLeft, broadcastQueueUpdate } from '@/lib/socket-broadcast'
 
 // POST - Leave a queue
@@ -49,7 +48,7 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Use transaction for atomic operations
+    // Use transaction for atomic operations (including position recalculation)
     await db.$transaction(async (tx) => {
       // Update member status
       await tx.queueMember.update({
@@ -79,10 +78,25 @@ export async function POST(request: NextRequest) {
         where: { id: queueId },
         data: { currentLength: activeCount },
       })
-    })
 
-    // Recalculate positions for remaining members
-    await recalculatePositions(queueId)
+      // Recalculate positions for remaining members within the transaction
+      const waitingMembers = await tx.queueMember.findMany({
+        where: {
+          queueId,
+          status: 'WAITING',
+        },
+        orderBy: { joinedAt: 'asc' },
+      })
+
+      await Promise.all(
+        waitingMembers.map((m, index) =>
+          tx.queueMember.update({
+            where: { id: m.id },
+            data: { position: index + 1 },
+          })
+        )
+      )
+    })
 
     // Create notification
     await db.notification.create({

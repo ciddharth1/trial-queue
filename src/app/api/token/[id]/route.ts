@@ -11,6 +11,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    // Authenticate the user
+    const { user, error: authError } = await authenticateRequest(request)
+    if (authError || !user) return authError!
+
     const { id } = await params
 
     const token = await db.token.findUnique({
@@ -30,6 +34,11 @@ export async function GET(
 
     if (!token) {
       return errorResponse('Token not found', 404)
+    }
+
+    // Non-admin users can only view their own tokens
+    if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN' && token.userId !== user.id) {
+      return errorResponse('Access denied', 403)
     }
 
     // Calculate current position if still waiting
@@ -196,14 +205,25 @@ export async function PATCH(
       },
     })
 
+    // Resolve counter name from database instead of hardcoding "Counter 1"
+    const effectiveCounterId = serviceCounterId || existingToken.serviceCounterId
+    let counterName = 'Counter'
+    if (effectiveCounterId) {
+      const counter = await db.serviceCounter.findUnique({
+        where: { id: effectiveCounterId },
+        select: { name: true },
+      })
+      counterName = counter?.name || 'Counter'
+    }
+
     // Broadcast real-time socket events so all dashboards update immediately
     if (status === 'CALLED') {
       broadcastTokenCalled({
         queueId: existingToken.queueId,
         tokenId: id,
         tokenNumber: existingToken.tokenNumber,
-        counterId: serviceCounterId || existingToken.serviceCounterId || 'counter-1',
-        counterName: 'Counter 1',
+        counterId: effectiveCounterId || 'counter-1',
+        counterName,
         userId: existingToken.userId,
       })
       broadcastQueueUpdate(existingToken.queueId, 'QUEUE_UPDATED')
@@ -212,8 +232,8 @@ export async function PATCH(
         queueId: existingToken.queueId,
         tokenId: id,
         tokenNumber: existingToken.tokenNumber,
-        counterId: serviceCounterId || existingToken.serviceCounterId || 'counter-1',
-        counterName: 'Counter 1',
+        counterId: effectiveCounterId || 'counter-1',
+        counterName,
         userId: existingToken.userId,
       })
     } else if (status === 'COMPLETED') {
@@ -221,8 +241,8 @@ export async function PATCH(
         queueId: existingToken.queueId,
         tokenId: id,
         tokenNumber: existingToken.tokenNumber,
-        counterId: serviceCounterId || existingToken.serviceCounterId || 'counter-1',
-        counterName: 'Counter 1',
+        counterId: effectiveCounterId || 'counter-1',
+        counterName,
         userId: existingToken.userId,
       })
       broadcastQueueUpdate(existingToken.queueId, 'QUEUE_UPDATED')

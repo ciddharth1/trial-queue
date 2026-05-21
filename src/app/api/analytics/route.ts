@@ -1,10 +1,14 @@
 import { NextRequest } from 'next/server'
 import { db } from '@/lib/db'
+import { requireAdmin } from '@/lib/auth'
 import { successResponse, errorResponse } from '@/lib/api-response'
 
-// GET - Get queue analytics (queue-specific or overall)
+// GET - Get queue analytics (queue-specific or overall) — admin only
 export async function GET(request: NextRequest) {
   try {
+    // Require admin authentication
+    const { user, error: authError } = await requireAdmin(request)
+    if (authError || !user) return authError!
     const { searchParams } = new URL(request.url)
     const queueId = searchParams.get('queueId')
     const dateRange = searchParams.get('dateRange') || '7d'

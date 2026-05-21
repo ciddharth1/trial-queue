@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
       scheduledClose: queue.scheduledClose,
       createdAt: queue.createdAt,
       updatedAt: queue.updatedAt,
-      waitingCount: queue._count.queueMembers,
+      waitingCount: queue._count.queueMembers, // includes WAITING + SERVING members
       serviceCenter: queue.serviceCenter,
     }))
 

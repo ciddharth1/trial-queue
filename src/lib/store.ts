@@ -33,6 +33,9 @@ export interface AppUser {
   avatar: string | null
   role: string
   isActive: boolean
+  lastLoginAt: string | null
+  createdAt?: string
+  updatedAt?: string
 }
 
 // ─── QUEUE TYPE ─────────────────────────────────────────
@@ -48,6 +51,14 @@ export interface AppQueue {
   serviceCenterId: string
   ownerId: string
   qrCode: string | null
+  scheduledOpen: string | null
+  scheduledClose: string | null
+  createdAt?: string
+  updatedAt?: string
+  serviceCenter?: {
+    id: string
+    name: string
+  }
   waitingCount?: number
   servingCount?: number
   completedCount?: number
@@ -63,8 +74,12 @@ export interface AppToken {
   userId: string
   serviceCounterId: string | null
   calledAt: string | null
+  servedAt: string | null
+  completedAt: string | null
+  expiresAt: string | null
   estimatedWait: number | null
   createdAt: string
+  updatedAt?: string
   position?: number
   queueName?: string
 }

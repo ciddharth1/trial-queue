@@ -211,7 +211,11 @@ class ApiClient {
     if (params?.queueId) query.set('queueId', params.queueId)
     if (params?.days) query.set('days', String(params.days))
     const qs = query.toString()
-    return this.request<any>(`/admin/analytics${qs ? `?${qs}` : ''}`)
+    return this.request<{
+      summary: Record<string, unknown>
+      dailyTraffic: unknown[]
+      peakHours: unknown[]
+    }>(`/admin/analytics${qs ? `?${qs}` : ''}`)
   }
 
   // ─── NOTIFICATIONS ──────────────────────────────────
@@ -236,7 +240,7 @@ class ApiClient {
 
   // ─── SERVICE CENTERS ────────────────────────────────
   async getServiceCenters() {
-    return this.request<any>('/service-center')
+    return this.request<{ items: { id: string; name: string; description?: string; address?: string }[] }>('/service-center')
   }
 
   async createServiceCenter(data: {
@@ -245,7 +249,7 @@ class ApiClient {
     address?: string
     phone?: string
   }) {
-    return this.request<any>('/service-center', {
+    return this.request<{ id: string; name: string }>('/service-center', {
       method: 'POST',
       body: JSON.stringify(data),
     })

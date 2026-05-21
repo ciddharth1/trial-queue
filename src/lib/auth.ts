@@ -2,7 +2,14 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import type { JwtPayload } from '@/types'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'queue-seva-jwt-secret-key-2024'
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET
+  if (!secret) {
+    throw new Error('JWT_SECRET environment variable is not configured. Cannot sign/verify tokens.')
+  }
+  return secret
+}
+
 const ACCESS_TOKEN_EXPIRY = '24h'
 const REFRESH_TOKEN_EXPIRY = '30d'
 
@@ -23,16 +30,16 @@ export async function comparePassword(
 // ─── JWT HELPERS ────────────────────────────────────────
 
 export function generateAccessToken(payload: JwtPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: ACCESS_TOKEN_EXPIRY })
+  return jwt.sign(payload, getJwtSecret(), { expiresIn: ACCESS_TOKEN_EXPIRY })
 }
 
 export function generateRefreshToken(payload: JwtPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: REFRESH_TOKEN_EXPIRY })
+  return jwt.sign(payload, getJwtSecret(), { expiresIn: REFRESH_TOKEN_EXPIRY })
 }
 
 export function verifyToken(token: string): JwtPayload | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as JwtPayload
+    return jwt.verify(token, getJwtSecret()) as unknown as JwtPayload
   } catch {
     return null
   }

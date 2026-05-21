@@ -136,7 +136,12 @@ interface ErrorResponse {
 // ============================================================================
 
 const PORT = 3003
-const JWT_SECRET = process.env.JWT_SECRET || 'queue-seva-jwt-secret-key-2024'
+const JWT_SECRET = process.env.JWT_SECRET
+if (!JWT_SECRET) {
+  console.error('[FATAL] JWT_SECRET environment variable is not set. Refusing to start with insecure defaults.')
+  process.exit(1)
+}
+const _jwtSecret: string = JWT_SECRET // TypeScript-safe reference after guard
 const ADMIN_ROOM_PREFIX = 'admin'
 const QUEUE_ROOM_PREFIX = 'queue'
 const ORG_ROOM_PREFIX = 'org'
@@ -185,7 +190,7 @@ function createErrorResponse(event: string, error: string, message: string): Err
 
 function verifyToken(token: string): JwtPayload | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as JwtPayload
+    return jwt.verify(token, _jwtSecret) as unknown as JwtPayload
   } catch {
     return null
   }
@@ -216,7 +221,7 @@ function getOnlineUserCount(): number {
 const httpServer = createServer()
 
 const io = new Server(httpServer, {
-  path: '/',
+  path: '/socket.io/',
   cors: {
     origin: '*',
     methods: ['GET', 'POST']

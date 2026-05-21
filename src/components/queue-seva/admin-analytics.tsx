@@ -29,7 +29,7 @@ interface DailyData {
 export function AdminAnalyticsScreen() {
   const { navigate, refreshCounter } = useAppStore()
   const [loading, setLoading] = useState(true)
-  const [analytics, setAnalytics] = useState<any>(null)
+  const [analytics, setAnalytics] = useState<Record<string, unknown> | null>(null)
   const [weeklyData, setWeeklyData] = useState<DailyData[]>([])
 
   useEffect(() => {
@@ -56,19 +56,23 @@ export function AdminAnalyticsScreen() {
     try {
       const result = await apiClient.getAdminAnalytics({ days: 7 })
       if (result.success && result.data) {
-        setAnalytics(result.data)
-        const analyticsArr = result.data.analytics || result.data.dailyTraffic || []
+        const data = result.data as Record<string, unknown>
+        setAnalytics(data)
+        const analyticsArr = (data.analytics || data.dailyTraffic || []) as unknown[]
         if (Array.isArray(analyticsArr) && analyticsArr.length > 0) {
           setWeeklyData(
-            analyticsArr.map((a: any, index: number) => ({
-              date: `${new Date(a.date).toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric' })}`,
-              joined: a.totalJoined || a.joined || 0,
-              served: a.totalServed || a.served || 0,
-              cancelled: a.totalCancelled || a.cancelled || 0,
-              noShow: a.totalNoShow || a.noShow || 0,
-              avgWaitTime: a.avgWaitTime || 0,
-              avgServiceTime: a.avgServiceTime || 0,
-            }))
+            analyticsArr.map((a: unknown, index: number) => {
+              const item = a as Record<string, unknown>
+              return {
+                date: `${new Date(item.date as string).toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric' })}`,
+                joined: (item.totalJoined as number) || (item.joined as number) || 0,
+                served: (item.totalServed as number) || (item.served as number) || 0,
+                cancelled: (item.totalCancelled as number) || (item.cancelled as number) || 0,
+                noShow: (item.totalNoShow as number) || (item.noShow as number) || 0,
+                avgWaitTime: (item.avgWaitTime as number) || 0,
+                avgServiceTime: (item.avgServiceTime as number) || 0,
+              }
+            })
           )
         }
       }
@@ -81,8 +85,8 @@ export function AdminAnalyticsScreen() {
 
   const maxJoined = Math.max(...weeklyData.map(d => d.joined), 1)
 
-  const summary = analytics?.summary || {}
-  const peakHours = analytics?.peakHours || []
+  const summary = (analytics?.summary || {}) as Record<string, unknown>
+  const peakHours = (analytics?.peakHours || []) as unknown[]
 
   // Calculate KPIs from real data
   const totalServed = weeklyData.reduce((sum, d) => sum + d.served, 0)
@@ -99,7 +103,7 @@ export function AdminAnalyticsScreen() {
   const throughput = weeklyData.length > 0 ? Math.round(totalServed / weeklyData.length) : 0
 
   // Queue performance from analytics data
-  const queuePerformance = analytics?.queuePerformance || []
+  const queuePerformance = (analytics?.queuePerformance || []) as unknown[]
 
   return (
     <div className="flex flex-1 flex-col bg-background">

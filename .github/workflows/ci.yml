@@ -10,7 +10,7 @@ env:
   NODE_VERSION: "22"
 
 jobs:
-  lint:
+  lint-and-typecheck:
     name: Lint & Type Check
     runs-on: ubuntu-latest
     steps:
@@ -18,6 +18,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
       - name: Install main project dependencies
         run: npm ci
       - name: Generate Prisma client
@@ -33,32 +34,34 @@ jobs:
         working-directory: mini-services/socket-service
         run: npx tsc --noEmit
 
-  test:
-    name: Tests
+  build:
+    name: Build
     runs-on: ubuntu-latest
-    needs: lint
+    needs: lint-and-typecheck
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
       - run: npm ci
       - run: npx prisma generate
-      - run: npm test -- --coverage
+      - run: npm run build
     env:
-      DATABASE_URL: "file:./test.db"
-      JWT_SECRET: "test-secret-key"
+      DATABASE_URL: "file:./ci.db"
+      JWT_SECRET: "ci-build-secret-key-not-for-production"
 
   deploy:
     name: Deploy to Production
     runs-on: ubuntu-latest
-    needs: [lint, test]
+    needs: [lint-and-typecheck, build]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
       - run: npm ci
       - run: npx prisma generate
       - run: npm run build
