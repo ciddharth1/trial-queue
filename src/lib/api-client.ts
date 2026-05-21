@@ -47,7 +47,7 @@ class ApiClient {
         if (response.status === 401) {
           // Token expired - try refresh (only if we haven't already tried)
           const store = (await import('@/lib/store')).useAppStore.getState()
-          if (store.refreshToken && !options._isRetry) {
+          if (store.refreshToken && !(options as any)._isRetry) {
             try {
               const refreshResult = await this.refreshToken(store.refreshToken)
               if (refreshResult.success && refreshResult.data) {

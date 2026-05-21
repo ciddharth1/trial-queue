@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 env:
-  NODE_VERSION: "20"
+  NODE_VERSION: "22"
 
 jobs:
   lint:
@@ -18,10 +18,20 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - run: npm ci
-      - run: npx prisma generate
-      - run: npm run lint
-      - run: npx tsc --noEmit
+      - name: Install main project dependencies
+        run: npm ci
+      - name: Generate Prisma client
+        run: npx prisma generate
+      - name: Lint
+        run: npm run lint
+      - name: Type check main project
+        run: npx tsc --noEmit
+      - name: Install socket service dependencies
+        working-directory: mini-services/socket-service
+        run: npm ci
+      - name: Type check socket service
+        working-directory: mini-services/socket-service
+        run: npx tsc --noEmit
 
   test:
     name: Tests
