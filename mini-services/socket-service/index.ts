@@ -218,6 +218,15 @@ function getOnlineUserCount(): number {
 // HTTP Server & Socket.io Setup
 // ============================================================================
 
+// ============================================================================
+// HTTP Request Handler (BEFORE Socket.io)
+// We handle health check and broadcast endpoints on the raw HTTP server
+// BEFORE passing requests to Socket.io. This is critical because io.engine.use()
+// only intercepts requests under the Socket.io path (e.g., /socket.io/),
+// so /health and /broadcast would never be reached through engine middleware.
+// We use a reference to `io` that gets set after creation.
+// ============================================================================
+
 const httpServer = createServer()
 
 const io = new Server(httpServer, {
@@ -234,28 +243,28 @@ const io = new Server(httpServer, {
 })
 
 // ============================================================================
-// HTTP Health Check Middleware (via Engine.io)
-// Since Socket.io with path '/' intercepts all HTTP requests, we use the
-// engine middleware to handle health check endpoints before Engine.io processes
-// them. This ensures /health and /ready endpoints work correctly.
+// HTTP Request Handler for non-Socket.io endpoints
+// We listen on the 'request' event and intercept requests BEFORE Socket.io.
+// Socket.io only handles requests to /socket.io/ path, so we handle
+// /health, /ready, and /broadcast here.
 // ============================================================================
 
-io.engine.use((req: IncomingMessage, res: ServerResponse, next: () => void) => {
+httpServer.on('request', (req: IncomingMessage, res: ServerResponse) => {
   // Strip XTransformPort query parameter from URL (added by Caddy gateway)
-  // This is needed because the Caddy proxy passes the query string through
   if (req.url && req.url.includes('XTransformPort=')) {
     try {
       const parsed = new URL(req.url, 'http://localhost')
       parsed.searchParams.delete('XTransformPort')
       req.url = parsed.pathname + (parsed.search ? parsed.search : '')
     } catch {
-      // If URL parsing fails, just strip it with regex
       req.url = req.url.replace(/[?&]XTransformPort=[^&]*/, '').replace(/&&/g, '&').replace(/\?$/, '')
     }
   }
 
-  // Parse the URL path without query parameters for matching
   const urlPath = (req.url || '').split('?')[0]
+
+  // Only intercept our custom endpoints - let Socket.io handle everything else
+  if (urlPath.startsWith('/socket.io')) return
 
   // Health check endpoint
   if (urlPath === '/health' && req.method === 'GET') {
@@ -285,7 +294,7 @@ io.engine.use((req: IncomingMessage, res: ServerResponse, next: () => void) => {
   // POST /broadcast with JSON body { event, data }
   if (urlPath === '/broadcast' && req.method === 'POST') {
     let body = ''
-    req.on('data', (chunk) => { body += chunk.toString() })
+    req.on('data', (chunk: Buffer) => { body += chunk.toString() })
     req.on('end', () => {
       try {
         const { event, data } = JSON.parse(body)
@@ -307,7 +316,9 @@ io.engine.use((req: IncomingMessage, res: ServerResponse, next: () => void) => {
     return
   }
 
-  next()
+  // Unknown path
+  res.writeHead(404, { 'Content-Type': 'application/json' })
+  res.end(JSON.stringify({ error: 'Not found', endpoints: ['/health', '/ready', '/broadcast', '/socket.io/'] }))
 })
 
 // ============================================================================

@@ -1,6 +1,16 @@
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 
+function generateQRCodeData(queueId: string, queueName: string, prefix: string): string {
+  return JSON.stringify({
+    type: 'QUEUE_JOIN',
+    queueId,
+    queueName,
+    prefix,
+    timestamp: new Date().toISOString(),
+  })
+}
+
 const prisma = new PrismaClient()
 
 async function main() {
@@ -73,7 +83,14 @@ async function main() {
       avgServiceTime: 300,
       serviceCenterId: center.id,
       ownerId: admin.id,
+      qrCode: generateQRCodeData('', 'General Service', 'A'),
     },
+  })
+
+  // Update QR code with actual queue ID
+  await prisma.queue.update({
+    where: { id: queueA.id },
+    data: { qrCode: generateQRCodeData(queueA.id, 'General Service', 'A') },
   })
 
   const queueB = await prisma.queue.create({
@@ -87,7 +104,13 @@ async function main() {
       avgServiceTime: 180,
       serviceCenterId: center.id,
       ownerId: admin.id,
+      qrCode: generateQRCodeData('', 'Priority Counter', 'B'),
     },
+  })
+
+  await prisma.queue.update({
+    where: { id: queueB.id },
+    data: { qrCode: generateQRCodeData(queueB.id, 'Priority Counter', 'B') },
   })
 
   const queueC = await prisma.queue.create({
@@ -101,7 +124,13 @@ async function main() {
       avgServiceTime: 420,
       serviceCenterId: center.id,
       ownerId: admin.id,
+      qrCode: generateQRCodeData('', 'Billing & Payments', 'C'),
     },
+  })
+
+  await prisma.queue.update({
+    where: { id: queueC.id },
+    data: { qrCode: generateQRCodeData(queueC.id, 'Billing & Payments', 'C') },
   })
 
   const queueD = await prisma.queue.create({
@@ -115,7 +144,13 @@ async function main() {
       avgServiceTime: 120,
       serviceCenterId: center.id,
       ownerId: admin.id,
+      qrCode: generateQRCodeData('', 'VIP Service', 'D'),
     },
+  })
+
+  await prisma.queue.update({
+    where: { id: queueD.id },
+    data: { qrCode: generateQRCodeData(queueD.id, 'VIP Service', 'D') },
   })
 
   const queueE = await prisma.queue.create({
@@ -129,7 +164,13 @@ async function main() {
       avgServiceTime: 540,
       serviceCenterId: center.id,
       ownerId: admin.id,
+      qrCode: generateQRCodeData('', 'Returns & Exchange', 'E'),
     },
+  })
+
+  await prisma.queue.update({
+    where: { id: queueE.id },
+    data: { qrCode: generateQRCodeData(queueE.id, 'Returns & Exchange', 'E') },
   })
 
   // Create demo tokens

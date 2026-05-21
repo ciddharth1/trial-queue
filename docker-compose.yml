@@ -12,12 +12,12 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - DATABASE_URL=file:./prod.db
+      - DATABASE_URL=file:./db/custom.db
       - JWT_SECRET=${JWT_SECRET:-queue-seva-production-secret-key}
-      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-queue-seva-nextauth-secret}
+      - SOCKET_SERVICE_URL=http://socket-service:3003
       - NODE_ENV=production
     volumes:
-      - app-data:/app/data
+      - app-db:/app/db
     restart: unless-stopped
     depends_on:
       - socket-service
@@ -40,7 +40,7 @@ services:
       - queue-seva-network
 
 volumes:
-  app-data:
+  app-db:
 
 networks:
   queue-seva-network:
