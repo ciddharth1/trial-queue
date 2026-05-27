@@ -1,0 +1,43 @@
+:81 {
+	# ─── Socket.io Real-Time Service ───────────────────────
+	# Route /socket.io/ requests to the socket service (port 3003)
+	# This must come BEFORE the catch-all handle for proper WebSocket upgrade support
+	@socketio path /socket.io/*
+	handle @socketio {
+		reverse_proxy localhost:3003 {
+			header_up Host {host}
+			header_up X-Forwarded-For {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Real-IP {remote_host}
+
+			# Support WebSocket upgrades for Socket.io
+			header_up Connection {>Connection}
+			header_up Upgrade {>Upgrade}
+		}
+	}
+
+	# ─── Public health probes only ─────────────────────────
+	# /broadcast is INTENTIONALLY not exposed publicly. It is an internal-only
+	# server-to-server endpoint and must remain reachable only on the Docker
+	# network (or behind firewall rules) — never directly from the internet.
+	@socket_health path /health /ready
+	handle @socket_health {
+		reverse_proxy localhost:3003 {
+			header_up Host {host}
+			header_up X-Forwarded-For {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Real-IP {remote_host}
+		}
+	}
+
+	# ─── Next.js Application ──────────────────────────────
+	# All other requests go to the Next.js app (port 3000)
+	handle {
+		reverse_proxy localhost:3000 {
+			header_up Host {host}
+			header_up X-Forwarded-For {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Real-IP {remote_host}
+		}
+	}
+}

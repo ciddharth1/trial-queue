@@ -1,0 +1,114 @@
+# ─── Queue Seva - Docker Compose (Production) ─────────
+# `version` is intentionally omitted — modern Docker Compose ignores it.
+#
+# Boot:
+#   cp .env.docker .env && nano .env       # set JWT_SECRET, SOCKET_BROADCAST_SECRET, CORS_ORIGINS, POSTGRES_PASSWORD
+#   docker compose build
+#   docker compose up -d
+#
+# The stack runs three services on an internal bridge network:
+#   - postgres        (DB, internal only — no host port published in production)
+#   - socket-service  (Socket.io, internal only — exposed via reverse proxy /socket.io/)
+#   - app             (Next.js standalone, exposed on :3000)
+
+services:
+  # ─── PostgreSQL ──────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: queue-seva-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required. Set it in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required. Set it in .env}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required. Set it in .env}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - queue-seva-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    # Internal-only by default. Uncomment to expose for external admin tooling.
+    # ports:
+    #   - "5432:5432"
+
+  # ─── Next.js Application ─────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # JWT_SECRET is required at build time for prisma generate / next build.
+        JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required. Set it in .env (run: openssl rand -base64 32)}
+        # NEXT_PUBLIC_* must be passed at build time to be embedded in the client bundle.
+        NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL:-}
+        NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${NEXT_PUBLIC_GOOGLE_CLIENT_ID:-}
+        # Build-time DATABASE_URL points at a placeholder host — Prisma client
+        # generation only needs a valid URL shape, not a reachable DB. The runtime
+        # value (env block below) is what actually matters.
+        DATABASE_URL: postgresql://placeholder:placeholder@build-time-placeholder:5432/placeholder?schema=public
+    container_name: queue-seva-app
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required. Set it in .env}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required. Set it in .env}
+      SOCKET_SERVICE_URL: http://socket-service:3003
+      SOCKET_BROADCAST_SECRET: ${SOCKET_BROADCAST_SECRET:?SOCKET_BROADCAST_SECRET is required. Set it in .env (run: openssl rand -base64 32)}
+      NODE_ENV: production
+      # Google OAuth — server-side audience for ID-token verification.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-${NEXT_PUBLIC_GOOGLE_CLIENT_ID:-}}
+      # Set to 1 to populate demo accounts on first boot (dev-only).
+      # Production should leave this unset.
+      SEED_ON_BOOT: ${SEED_ON_BOOT:-0}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      socket-service:
+        condition: service_started
+    networks:
+      - queue-seva-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # ─── Socket.io Real-time Service ─────────────────────────
+  socket-service:
+    build:
+      context: ./mini-services/socket-service
+      dockerfile: SocketDockerfile
+    container_name: queue-seva-socket
+    # Internal-only port. Comment out the ports block in production to keep this
+    # service unreachable from the host network — clients reach it through the
+    # reverse proxy via /socket.io/.
+    ports:
+      - "3003:3003"
+    environment:
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required. Set it in .env}
+      PORT: 3003
+      NODE_ENV: production
+      CORS_ORIGINS: ${CORS_ORIGINS:?CORS_ORIGINS is required in production. Use specific origins, not "*"}
+      SOCKET_BROADCAST_SECRET: ${SOCKET_BROADCAST_SECRET:?SOCKET_BROADCAST_SECRET is required. Set it in .env}
+    restart: unless-stopped
+    networks:
+      - queue-seva-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  postgres-data:
+
+networks:
+  queue-seva-network:
+    driver: bridge

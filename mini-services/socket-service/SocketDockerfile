@@ -1,0 +1,48 @@
+# ─── Queue Seva Socket Service - Docker Build ──────────
+# Standalone Socket.io real-time service
+
+# Stage 1: Build (compile TS to JS so production runs without --experimental-strip-types)
+FROM node:22-alpine AS builder
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
+COPY . .
+
+# Compile TypeScript to JavaScript explicitly (override the project's noEmit: true).
+# Failing this build is a hard error — we don't want a silent fallback to .ts at runtime.
+RUN npx tsc \
+  --outDir dist \
+  --module commonjs \
+  --moduleResolution node \
+  --esModuleInterop \
+  --target ES2022 \
+  --strict \
+  --skipLibCheck \
+  index.ts
+
+# Stage 2: Production runtime
+FROM node:22-alpine AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+RUN addgroup --system --gid 1001 socketio \
+  && adduser --system --uid 1001 socketio
+
+# Only copy production deps + compiled output
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev --ignore-scripts \
+  && npm cache clean --force
+
+COPY --from=builder /app/dist ./dist
+
+USER socketio
+
+EXPOSE 3003
+
+ENV PORT=3003
+ENV HOSTNAME="0.0.0.0"
+
+CMD ["node", "dist/index.js"]

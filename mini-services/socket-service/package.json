@@ -1,0 +1,21 @@
+{
+  "name": "queue-seva-socket-service",
+  "version": "1.0.0",
+  "description": "Socket.io real-time service for Queue Seva - Smart Queue Management SaaS",
+  "scripts": {
+    "dev": "bun --hot index.ts",
+    "dev:node": "node --watch --experimental-strip-types index.ts",
+    "build": "tsc --outDir dist --module commonjs --moduleResolution node --esModuleInterop --target ES2022 --strict --skipLibCheck index.ts",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "socket.io": "^4.8.1",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.10",
+    "bun-types": "^1.1.0",
+    "typescript": "^5"
+  }
+}
