@@ -209,6 +209,26 @@ class ApiClient {
     })
   }
 
+  /**
+   * Validate a single-use QR token. Used by admin scanners to consume the
+   * token at a counter / turnstile. Always 200; check `data.valid`.
+   */
+  async validateQrToken(qrPayload: string, serviceCounterId?: string) {
+    return this.request<{
+      valid: boolean
+      reason?: string
+      tokenNumber?: string
+      tokenId?: string
+      consumedAt?: string
+      counter?: { id: string; name: string; label?: string } | null
+      user?: { id: string; name: string; email: string; avatar?: string | null } | null
+      queue?: { id: string; name: string; prefix: string } | null
+    }>('/token/validate', {
+      method: 'POST',
+      body: JSON.stringify({ qrPayload, serviceCounterId }),
+    })
+  }
+
   // ─── ADMIN ──────────────────────────────────────────
   async getAdminStats() {
     return this.request<{

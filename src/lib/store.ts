@@ -22,6 +22,7 @@ export type AppView =
   | 'admin-dashboard'
   | 'admin-analytics'
   | 'admin-queues'
+  | 'admin-scanner'
   | 'settings'
 
 // ─── USER TYPE ──────────────────────────────────────────

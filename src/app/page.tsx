@@ -25,6 +25,7 @@ import { SettingsScreen } from '@/components/queue-seva/settings-screen'
 import { AdminDashboard } from '@/components/queue-seva/admin-dashboard'
 import { AdminAnalyticsScreen } from '@/components/queue-seva/admin-analytics'
 import { AdminQueuesScreen } from '@/components/queue-seva/admin-queues'
+import { AdminScannerScreen } from '@/components/queue-seva/admin-scanner'
 import { QueuesListScreen } from '@/components/queue-seva/queues-list'
 import { ThemeInitializer } from '@/components/queue-seva/theme-initializer'
 
@@ -67,6 +68,8 @@ function ViewRouter({ view }: { view: AppView }) {
       return <LayoutWithSidebar><AdminAnalyticsScreen /></LayoutWithSidebar>
     case 'admin-queues':
       return <LayoutWithSidebar><AdminQueuesScreen /></LayoutWithSidebar>
+    case 'admin-scanner':
+      return <LayoutWithSidebar><AdminScannerScreen /></LayoutWithSidebar>
     default:
       return <LayoutWithSidebar><UserDashboard /></LayoutWithSidebar>
   }

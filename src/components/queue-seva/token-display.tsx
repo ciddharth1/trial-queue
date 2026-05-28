@@ -9,6 +9,7 @@ import { emitRefresh } from '@/hooks/use-realtime'
 import { socketManager } from '@/lib/socket'
 import { Header } from './header'
 import { Button } from '@/components/ui/button'
+import { TokenQrCard } from './token-qr-card'
 import { toast } from 'sonner'
 
 function formatWaitTime(seconds: number | null): string {
@@ -136,9 +137,7 @@ export function TokenDisplayScreen() {
             animate={{ scale: 1, opacity: 1 }}
             transition={{ type: 'spring', stiffness: 300, damping: 25 }}
             className="relative overflow-hidden rounded-3xl border border-slate-800/50 bg-gradient-to-b from-[#111827] to-[#0F172A] p-8 text-center shadow-2xl"
-          >
-            {/* Glow effect */}
-            <div className="absolute inset-0 opacity-30">
+          ><div className="absolute inset-0 opacity-30">
               <div className="absolute left-1/2 top-0 h-40 w-40 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#4F46E5] blur-[80px]" />
               <div className="absolute bottom-0 right-0 h-32 w-32 rounded-full bg-[#06B6D4] blur-[60px]" />
             </div>
@@ -211,6 +210,24 @@ export function TokenDisplayScreen() {
               </motion.div>
             </div>
           </motion.div>
+
+          {/* Secure single-use QR for in-person validation */}
+          {(isWaiting || isCalled || isServing) && (
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.55 }}
+            >
+              <TokenQrCard
+                tokenId={token.id}
+                initialExpiresAt={token.expiresAt ?? null}
+                consumed={isServing && !!token.servedAt}
+              />
+              <p className="mt-2 text-center text-[11px] leading-relaxed text-slate-500">
+                Show this QR at the counter. It expires after first scan.
+              </p>
+            </motion.div>
+          )}
 
           {/* Live Tracking Link */}
           <motion.div

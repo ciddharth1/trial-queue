@@ -10,6 +10,7 @@ import {
   Settings,
   BarChart3,
   Shield,
+  ShieldCheck,
   LogOut,
   X,
   Users,
@@ -37,6 +38,7 @@ const userNavItems: NavItem[] = [
 
 const adminNavItems: NavItem[] = [
   { icon: LayoutDashboard, label: 'Dashboard', view: 'admin-dashboard', roles: ['ADMIN', 'SUPER_ADMIN'] },
+  { icon: ShieldCheck, label: 'Validate QR', view: 'admin-scanner', roles: ['ADMIN', 'SUPER_ADMIN'] },
   { icon: BarChart3, label: 'Analytics', view: 'admin-analytics', roles: ['ADMIN', 'SUPER_ADMIN'] },
   { icon: ListOrdered, label: 'Queue Mgmt', view: 'admin-queues', roles: ['ADMIN', 'SUPER_ADMIN'] },
   { icon: ListOrdered, label: 'My Tickets', view: 'my-tickets' },
