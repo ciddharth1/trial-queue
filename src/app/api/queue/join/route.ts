@@ -4,6 +4,12 @@ import { authenticateRequest } from '@/lib/auth'
 import { successResponse, errorResponse } from '@/lib/api-response'
 import { generateTokenNumber, estimateWaitTime, getNextSequence } from '@/lib/queue-utils'
 import { broadcastTokenCreated, broadcastQueueJoined } from '@/lib/socket-broadcast'
+import { generateQrSecret, signQrPayload } from '@/lib/qr-token'
+
+// How long a freshly-issued token's QR is valid for. Long enough to handle
+// an extended wait, short enough that a leaked QR doesn't live forever.
+// Override per deployment via TOKEN_TTL_HOURS env var if needed.
+const DEFAULT_TOKEN_TTL_HOURS = 12
 
 // POST - Join a queue
 export async function POST(request: NextRequest) {
@@ -43,7 +49,14 @@ export async function POST(request: NextRequest) {
     // generation, member/token creation and queue length update. The duplicate
     // membership check MUST be inside the transaction to avoid a race where two
     // concurrent joins from the same user both pass the check before either commits.
-    let result: { member: { id: string }; token: { id: string; tokenNumber: string }; position: number; estimatedWait: number }
+    let result: {
+      member: { id: string }
+      token: { id: string; tokenNumber: string }
+      position: number
+      estimatedWait: number
+      qrPayload: string
+      tokenExpiresAt: Date
+    }
     try {
       result = await db.$transaction(async (tx) => {
         // Re-check membership inside the transaction (race-safe)
@@ -73,6 +86,13 @@ export async function POST(request: NextRequest) {
         // Calculate estimated wait time
         const estimatedWait = estimateWaitTime(queue.avgServiceTime, position)
 
+        // Per-token QR secret + expiry. The QR payload itself is signed with
+        // HMAC(JWT_SECRET, tokenId|qrSecret|exp) so a stolen QR can't be
+        // forged or extended.
+        const ttlHours = Number(process.env.TOKEN_TTL_HOURS) || DEFAULT_TOKEN_TTL_HOURS
+        const tokenExpiresAt = new Date(Date.now() + ttlHours * 60 * 60 * 1000)
+        const qrSecret = generateQrSecret()
+
         // Create queue member
         const member = await tx.queueMember.create({
           data: {
@@ -83,7 +103,7 @@ export async function POST(request: NextRequest) {
           },
         })
 
-        // Create token
+        // Create token (with secure QR fields)
         const token = await tx.token.create({
           data: {
             tokenNumber,
@@ -92,7 +112,16 @@ export async function POST(request: NextRequest) {
             queueId,
             userId,
             estimatedWait,
+            qrSecret,
+            expiresAt: tokenExpiresAt,
           },
+        })
+
+        // Build the signed QR payload string. The client renders this as a QR.
+        const qrPayload = signQrPayload({
+          tokenId: token.id,
+          qrSecret,
+          expiresAt: tokenExpiresAt,
         })
 
         // Update queue length - re-read current queue state inside transaction
@@ -104,7 +133,7 @@ export async function POST(request: NextRequest) {
           })
         }
 
-        return { member, token, position, estimatedWait }
+        return { member, token, position, estimatedWait, qrPayload, tokenExpiresAt }
       })
     } catch (txError) {
       if ((txError as Error).message === 'ALREADY_IN_QUEUE') {
@@ -147,6 +176,9 @@ export async function POST(request: NextRequest) {
         ...result.token,
         position: result.position,
         queueName: queue.name,
+        // Signed QR payload, ready to render. The qrSecret never leaves the server.
+        qrPayload: result.qrPayload,
+        expiresAt: result.tokenExpiresAt,
       },
       'Successfully joined queue',
       201,

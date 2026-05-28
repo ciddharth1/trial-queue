@@ -4,6 +4,7 @@ import { authenticateRequest, requireAdmin } from '@/lib/auth'
 import { successResponse, errorResponse } from '@/lib/api-response'
 import { recalculatePositions } from '@/lib/queue-utils'
 import { broadcastTokenCalled, broadcastTokenServing, broadcastTokenCompleted, broadcastTokenExpired, broadcastQueueUpdate } from '@/lib/socket-broadcast'
+import { signQrPayload } from '@/lib/qr-token'
 
 // GET - Get token details
 export async function GET(
@@ -53,9 +54,30 @@ export async function GET(
       })
     }
 
+    // Re-derive a signed QR payload for the owner only. This lets the user's
+    // device render the QR without ever exposing the per-token qrSecret.
+    // Admins viewing someone else's token get the metadata but no QR (no need).
+    let qrPayload: string | null = null
+    const isOwner = token.userId === user.id
+    const stillUsable = !token.consumedAt
+      && (!token.expiresAt || token.expiresAt > new Date())
+      && ['WAITING', 'CALLED', 'SERVING'].includes(token.status)
+    if (isOwner && stillUsable && token.qrSecret && token.expiresAt) {
+      qrPayload = signQrPayload({
+        tokenId: token.id,
+        qrSecret: token.qrSecret,
+        expiresAt: token.expiresAt,
+      })
+    }
+
+    // Don't leak qrSecret to clients — strip it from the response.
+    const { qrSecret: _qrSecret, ...safeToken } = token
+    void _qrSecret
+
     return successResponse({
-      ...token,
+      ...safeToken,
       currentPosition,
+      qrPayload,
     })
   } catch (error) {
     console.error('Get token error:', error)

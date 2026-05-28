@@ -180,6 +180,19 @@ model Token {
   completedAt  DateTime?
   expiresAt    DateTime?
   estimatedWait Int?    // Estimated wait in seconds at join time
+
+  // ─── Secure single-use QR fields ────────────────────
+  // qrSecret: server-only random salt, mixed into the HMAC. Never exposed to
+  // clients — the QR payload is signed with HMAC(JWT_SECRET, tokenId|qrSecret|expiresAt)
+  // so a stolen QR can be replayed only until expiresAt, and validation can be
+  // re-derived without storing the signature itself.
+  qrSecret     String?  @default("")
+  // consumedAt: timestamp when the QR was successfully validated and the token
+  // entered SERVING. Once non-null, the QR cannot be re-used (single-use).
+  consumedAt   DateTime?
+  // validatedBy: id of the admin/staff user who scanned and validated the QR.
+  validatedBy  String?
+
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -192,6 +205,8 @@ model Token {
   @@index([userId])
   @@index([tokenNumber])
   @@index([status])
+  @@index([expiresAt])
+  @@index([consumedAt])
 }
 
 // ─── NOTIFICATIONS ────────────────────────────────────
