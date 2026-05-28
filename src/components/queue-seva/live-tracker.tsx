@@ -109,48 +109,40 @@ export function LiveTrackerScreen() {
   }, [])
 
   useEffect(() => {
-    if (refreshCounter > 0) {
-      loadRealData()
-    }
+    if (refreshCounter > 0) loadRealData()
   }, [refreshCounter])
 
-  useEffect(() => {
-    if (!activeToken) return
-    const interval = setInterval(() => {
-      loadRealData()
-    }, 3000)
-    return () => clearInterval(interval)
-  }, [activeToken])
-
-  // Refresh specific token for status changes
+  // Refresh specific token for status changes (driven by socket events via refreshCounter)
   const [tokenDetail, setTokenDetail] = useState<any>(null)
-  useEffect(() => {
+  const refreshTokenDetail = useCallback(async () => {
     if (!activeToken) return
-    const interval = setInterval(async () => {
-      try {
-        const result = await apiClient.getToken(activeToken.id)
-        if (result.success && result.data) {
-          setTokenDetail(result.data)
-          if ((result.data as any).currentPosition) {
-            setCurrentPosition((result.data as any).currentPosition)
-          }
-          if ((result.data as any).status === 'CALLED' && activeToken.status === 'WAITING') {
-            useAppStore.getState().setSelectedToken({
-              ...activeToken,
-              status: 'CALLED',
-              calledAt: (result.data as any).calledAt,
-            })
-            setToastMessage({ title: 'It\'s your turn!', subtitle: 'Please proceed to the counter' })
-            setShowToast(true)
-            setTimeout(() => setShowToast(false), 5000)
+    try {
+      const result = await apiClient.getToken(activeToken.id)
+      if (result.success && result.data) {
+        setTokenDetail(result.data)
+        if ((result.data as any).currentPosition) {
+          setCurrentPosition((result.data as any).currentPosition)
+        }
+        if ((result.data as any).status === 'CALLED' && activeToken.status === 'WAITING') {
+          useAppStore.getState().setSelectedToken({
+            ...activeToken,
+            status: 'CALLED',
+            calledAt: (result.data as any).calledAt,
+          })
+          setToastMessage({ title: 'It\'s your turn!', subtitle: 'Please proceed to the counter' })
+          setShowToast(true)
+          setTimeout(() => setShowToast(false), 5000)
           }
         }
       } catch (error) {
         console.error('Failed to refresh token:', error)
       }
-    }, 3000)
-    return () => clearInterval(interval)
   }, [activeToken])
+
+  // Trigger token detail refresh on socket events
+  useEffect(() => {
+    if (refreshCounter > 0) refreshTokenDetail()
+  }, [refreshCounter, refreshTokenDetail])
 
   const handleLeaveQueue = async () => {
     if (!activeToken) return

@@ -186,33 +186,38 @@ interface UseAutoRefreshOptions {
 }
 
 export function useAutoRefresh({
-  interval = 5000,
+  interval = 30_000,   // Fallback poll — only fires when socket is disconnected
   enabled = true,
   onRefresh,
   refreshOnEvents = ['queue-update', 'token-update', 'admin-update', 'all'],
 }: UseAutoRefreshOptions) {
   const refreshRef = useRef(onRefresh)
-  // Honor the user's "Auto Refresh" setting. When disabled, we drop the timer.
-  // Live tracker / queue detail will still respond to socket events, just not
-  // wake up every 5 seconds to poll. The user gets a calmer UI; we get less load.
   const autoRefreshSetting = useAppStore((s) => s.settings.autoRefresh)
+  const socketConnected = useAppStore((s) => s.socketConnected)
+
   useEffect(() => {
     refreshRef.current = onRefresh
   }, [onRefresh])
 
-  // Polling - reduced interval for more responsive updates
+  // ─── Fallback polling ─────────────────────────────────────────────────────
+  // Only poll when the socket is disconnected (network hiccup, server restart,
+  // etc.). When the socket is live, all updates arrive via events below and
+  // polling is redundant — it causes the flicker the user reported.
   useEffect(() => {
     if (!enabled || !refreshRef.current) return
-    if (!autoRefreshSetting) return // user disabled polling explicitly
+    if (!autoRefreshSetting) return
+    if (socketConnected) return  // socket is live — no need to poll
 
     const id = setInterval(() => {
       refreshRef.current?.()
     }, interval)
 
     return () => clearInterval(id)
-  }, [interval, enabled, autoRefreshSetting])
+  }, [interval, enabled, autoRefreshSetting, socketConnected])
 
-  // Event-based refresh (in-memory + BroadcastChannel + Socket.io)
+  // ─── Event-driven refresh ─────────────────────────────────────────────────
+  // Socket.io events → triggerRefresh() → refreshCounter++ → components
+  // re-fetch only the data they care about. No timer, no flicker.
   useEffect(() => {
     if (!enabled || !refreshRef.current) return
 

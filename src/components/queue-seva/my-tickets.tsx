@@ -85,17 +85,10 @@ export function MyTicketsScreen() {
     loadTickets()
   }, [])
 
+  // Refresh when socket events arrive
   useEffect(() => {
-    if (refreshCounter > 0) {
-      loadTickets()
-    }
+    if (refreshCounter > 0) loadTickets()
   }, [refreshCounter])
-
-  // Auto-poll for updates
-  useEffect(() => {
-    const interval = setInterval(loadTickets, 5000)
-    return () => clearInterval(interval)
-  }, [])
 
   const activeTickets = userTokens.filter((t) => ['WAITING', 'CALLED', 'SERVING'].includes(t.status))
   const pastTickets = userTokens.filter((t) => ['COMPLETED', 'CANCELLED', 'EXPIRED'].includes(t.status))

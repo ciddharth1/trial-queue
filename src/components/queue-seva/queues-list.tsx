@@ -35,20 +35,10 @@ export function QueuesListScreen() {
     loadQueues()
   }, [statusFilter])
 
-  // Refresh when refreshCounter changes
+  // Refresh when refreshCounter changes (driven by socket events)
   useEffect(() => {
-    if (refreshCounter > 0) {
-      loadQueues()
-    }
+    if (refreshCounter > 0) loadQueues()
   }, [refreshCounter])
-
-  // Auto-poll every 5 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      loadQueues()
-    }, 5000)
-    return () => clearInterval(interval)
-  }, [statusFilter])
 
   const filteredQueues = queues.filter(
     (q) =>

@@ -226,13 +226,8 @@ export function UserDashboard() {
     }
   }, [refreshCounter])
 
-  // Auto-poll every 5 seconds for real-time updates
-  useEffect(() => {
-    const interval = setInterval(() => {
-      loadData()
-    }, 5000)
-    return () => clearInterval(interval)
-  }, [])
+  // Auto-poll every 5 seconds for real-time updates — removed.
+  // Updates now arrive via socket events → refreshCounter → loadData().
 
   const handleJoinQueue = (queue: AppQueue) => {
     setSelectedQueue(queue)

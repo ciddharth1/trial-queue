@@ -73,20 +73,10 @@ export function AdminQueuesScreen() {
     loadQueues()
   }, [])
 
-  // Refresh when refreshCounter changes (triggered by user/admin actions)
+  // Refresh when refreshCounter changes (driven by socket events)
   useEffect(() => {
-    if (refreshCounter > 0) {
-      loadQueues()
-    }
+    if (refreshCounter > 0) loadQueues()
   }, [refreshCounter])
-
-  // Faster polling for real-time updates (4 seconds)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      loadQueues()
-    }, 4000)
-    return () => clearInterval(interval)
-  }, [])
 
   const filteredQueues = queuesList.filter(
     (q) => q.name.toLowerCase().includes(searchQuery.toLowerCase()) || q.prefix.toLowerCase().includes(searchQuery.toLowerCase())

@@ -155,14 +155,8 @@ export function AdminDashboard() {
     }
   }, [refreshCounter, loadStats, loadChartData])
 
-  // Auto-poll every 2 seconds for real-time updates
-  useEffect(() => {
-    const interval = setInterval(() => {
-      loadStats()
-      loadChartData()
-    }, 2000)
-    return () => clearInterval(interval)
-  }, [loadStats, loadChartData])
+  // Auto-poll every 2 seconds — removed.
+  // Updates now arrive via socket events → refreshCounter → loadStats/loadChartData().
 
   // Recent tokens display
   const recentTokens = stats?.recentTokens || []

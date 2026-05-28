@@ -62,12 +62,8 @@ export function TokenDisplayScreen() {
     }
   }, [selectedToken])
 
-  // Poll token status every 3 seconds for real-time updates
-  useEffect(() => {
-    if (!selectedToken?.id) return
-    const interval = setInterval(refreshTokenStatus, 3000)
-    return () => clearInterval(interval)
-  }, [selectedToken?.id, refreshTokenStatus])
+  // Poll token status — removed.
+  // Updates now arrive via socket events → refreshCounter → refreshTokenStatus().
 
   // Also refresh on refreshCounter change
   useEffect(() => {

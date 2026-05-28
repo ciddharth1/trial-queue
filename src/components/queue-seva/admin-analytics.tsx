@@ -43,13 +43,8 @@ export function AdminAnalyticsScreen() {
     }
   }, [refreshCounter])
 
-  // Auto-poll every 8 seconds for analytics updates
-  useEffect(() => {
-    const interval = setInterval(() => {
-      loadAnalytics()
-    }, 8000)
-    return () => clearInterval(interval)
-  }, [])
+  // Auto-poll every 8 seconds — removed.
+  // Updates now arrive via socket events → refreshCounter → loadAnalytics().
 
   const loadAnalytics = async () => {
     setLoading(true)

@@ -70,14 +70,8 @@ export function QueueDetailScreen() {
     }
   }, [refreshCounter])
 
-  // Faster polling for real-time updates
-  useEffect(() => {
-    if (!selectedQueue?.id) return
-    const interval = setInterval(() => {
-      loadQueueDetail()
-    }, 4000)
-    return () => clearInterval(interval)
-  }, [selectedQueue?.id])
+  // Faster polling for real-time updates — removed.
+  // Updates now arrive via socket events → refreshCounter → loadQueueDetail().
 
   const handleJoinQueue = async () => {
     if (!queue || !user) return
