@@ -309,7 +309,8 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: 'queueSevaAuth',
-      // Persist auth-related fields AND settings AND theme
+      // Persist auth-related fields, settings, theme, AND the currentView so a
+      // refresh keeps the user on the screen they were looking at.
       partialize: (state) => ({
         user: state.user,
         accessToken: state.accessToken,
@@ -317,6 +318,7 @@ export const useAppStore = create<AppState>()(
         isAuthenticated: state.isAuthenticated,
         theme: state.theme,
         settings: state.settings,
+        currentView: state.currentView,
       }),
     }
   )

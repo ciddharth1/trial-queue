@@ -220,6 +220,8 @@ export function TokenDisplayScreen() {
             >
               <TokenQrCard
                 tokenId={token.id}
+                tokenNumber={token.tokenNumber}
+                queueName={token.queueName}
                 initialExpiresAt={token.expiresAt ?? null}
                 consumed={isServing && !!token.servedAt}
               />

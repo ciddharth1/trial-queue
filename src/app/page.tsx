@@ -94,7 +94,13 @@ const SPLASH_DURATION_AUTHED_MS = 350
 const SPLASH_DURATION_UNAUTHED_MS = 800
 
 export default function Home() {
-  const { currentView, isAuthenticated, user, accessToken, navigate, goBack } = useAppStore()
+  const { currentView, navigate, goBack } = useAppStore()
+  // We deliberately do NOT subscribe to isAuthenticated / user here. Zustand's
+  // persist middleware can hydrate after the first render — if we read from
+  // closure values we'd capture the pre-hydration nulls and bounce a logged-in
+  // user back to /welcome on every refresh. Instead, the splash effect below
+  // reads the freshly-hydrated state via getState() when its timer fires.
+  const accessToken = useAppStore((s) => s.accessToken)
   const [hydrated, setHydrated] = useState(false)
   const initializedRef = useRef(false)
 
@@ -110,25 +116,62 @@ export default function Home() {
     if (initializedRef.current) return
     initializedRef.current = true
 
-    const delay = isAuthenticated && user
-      ? SPLASH_DURATION_AUTHED_MS
-      : SPLASH_DURATION_UNAUTHED_MS
-
-    const timer = setTimeout(() => {
-      if (isAuthenticated && user) {
-        apiClient.setAccessToken(accessToken)
-        const target = user.role === 'ADMIN' || user.role === 'SUPER_ADMIN'
-          ? 'admin-dashboard'
-          : 'dashboard'
-        navigate(target as AppView)
-      } else if (currentView === 'splash') {
-        navigate('welcome')
+    // Wait for Zustand persist middleware to finish rehydrating before we
+    // make any navigation decisions. `onFinishHydration` fires the moment
+    // the store has been populated from localStorage. If hydration already
+    // completed (common when persist is synchronous), the listener fires
+    // immediately on the next tick.
+    const persistApi = (useAppStore as unknown as {
+      persist?: {
+        hasHydrated: () => boolean
+        onFinishHydration: (cb: () => void) => () => void
       }
-      setHydrated(true)
-    }, delay)
+    }).persist
 
-    return () => clearTimeout(timer)
-    // We intentionally only run this once on mount.
+    const decideNavigation = () => {
+      const { isAuthenticated, user, currentView } = useAppStore.getState()
+      const delay = isAuthenticated && user
+        ? SPLASH_DURATION_AUTHED_MS
+        : SPLASH_DURATION_UNAUTHED_MS
+
+      const timer = setTimeout(() => {
+        const state = useAppStore.getState() // re-read in case auth changed mid-splash
+        if (state.isAuthenticated && state.user) {
+          apiClient.setAccessToken(state.accessToken)
+          const target = state.user.role === 'ADMIN' || state.user.role === 'SUPER_ADMIN'
+            ? 'admin-dashboard'
+            : 'dashboard'
+          // Only redirect to dashboard from non-app views (splash/welcome/login/register).
+          // If the user explicitly navigated somewhere (e.g. token-display), keep them there.
+          const transientViews: AppView[] = ['splash', 'welcome', 'login', 'register']
+          if (transientViews.includes(state.currentView)) {
+            state.navigate(target as AppView)
+          }
+        } else if (currentView === 'splash') {
+          state.navigate('welcome')
+        }
+        setHydrated(true)
+      }, delay)
+      return () => clearTimeout(timer)
+    }
+
+    if (!persistApi || persistApi.hasHydrated()) {
+      return decideNavigation()
+    }
+    // Wait for hydration; we still cap the wait so we never hang on splash.
+    let cleanup: (() => void) | undefined
+    const fallback = setTimeout(() => {
+      cleanup = decideNavigation()
+    }, 500)
+    const off = persistApi.onFinishHydration(() => {
+      clearTimeout(fallback)
+      cleanup = decideNavigation()
+    })
+    return () => {
+      clearTimeout(fallback)
+      off()
+      cleanup?.()
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
