@@ -279,13 +279,16 @@ export function AdminAnalyticsScreen() {
             </motion.div>
           </div>
 
-          {/* KPI Cards */}
+          {/* KPI Cards — values computed from real analytics data above. We deliberately
+              don't render fake +/-X% deltas; period-over-period requires comparing
+              against a previous range we haven't fetched. The footer label makes it
+              clear these are values for the selected window. */}
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             {[
-              { label: 'Avg Service Time', value: `${avgServiceMin}m`, change: -8, icon: Clock, color: 'text-[#06B6D4]' },
-              { label: 'No-Show Rate', value: `${noShowRate}%`, change: -12, icon: XCircle, color: 'text-amber-400' },
-              { label: 'Satisfaction', value: `${satisfactionRate}%`, change: 2, icon: CheckCircle2, color: 'text-emerald-400' },
-              { label: 'Throughput', value: `${throughput}/day`, change: 15, icon: ArrowUpRight, color: 'text-[#4F46E5]' },
+              { label: 'Avg Service Time', value: avgServiceMin > 0 ? `${avgServiceMin}m` : '—', icon: Clock, color: 'text-[#06B6D4]' },
+              { label: 'No-Show Rate', value: totalJoined > 0 ? `${noShowRate}%` : '—', icon: XCircle, color: 'text-amber-400' },
+              { label: 'Satisfaction', value: totalJoined > 0 ? `${satisfactionRate}%` : '—', icon: CheckCircle2, color: 'text-emerald-400' },
+              { label: 'Throughput', value: throughput > 0 ? `${throughput}/day` : '—', icon: ArrowUpRight, color: 'text-[#4F46E5]' },
             ].map((kpi, i) => (
               <motion.div
                 key={kpi.label}
@@ -296,16 +299,8 @@ export function AdminAnalyticsScreen() {
               >
                 <kpi.icon className={`h-5 w-5 ${kpi.color}`} />
                 <p className="mt-2 text-xl font-bold text-white">{kpi.value}</p>
-                <div className="flex items-center justify-between">
-                  <p className="text-[10px] text-slate-500">{kpi.label}</p>
-                  <span
-                    className={`text-[10px] font-semibold ${
-                      kpi.change >= 0 ? 'text-emerald-400' : 'text-red-400'
-                    }`}
-                  >
-                    {kpi.change >= 0 ? '+' : ''}{kpi.change}%
-                  </span>
-                </div>
+                <p className="text-[10px] text-slate-500">{kpi.label}</p>
+                <p className="text-[9px] text-slate-600 mt-0.5">Last 7 days</p>
               </motion.div>
             ))}
           </div>

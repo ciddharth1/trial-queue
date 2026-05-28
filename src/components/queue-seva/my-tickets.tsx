@@ -31,6 +31,26 @@ function formatWaitTime(seconds: number | null): string {
   return `${Math.floor(mins / 60)}h ${mins % 60}m`
 }
 
+// Format a timestamp as a short time-of-day string. Returns '--' when null.
+function formatTime(iso: string | null | undefined): string {
+  if (!iso) return '--'
+  try {
+    return new Date(iso).toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' })
+  } catch {
+    return '--'
+  }
+}
+
+// Compute "checked in" → "checked out" duration in minutes. Returns null when
+// either timestamp is missing.
+function durationMinutes(start: string | null | undefined, end: string | null | undefined): number | null {
+  if (!start || !end) return null
+  const a = new Date(start).getTime()
+  const b = new Date(end).getTime()
+  if (Number.isNaN(a) || Number.isNaN(b) || b <= a) return null
+  return Math.round((b - a) / 60000)
+}
+
 interface HistoryTicket {
   id: string
   tokenNumber: string
@@ -235,6 +255,14 @@ export function MyTicketsScreen() {
                             <Clock className="h-4 w-4" />
                             Est. Wait: {formatWaitTime(token.estimatedWait)}
                           </p>
+                          <p className="text-[11px] text-on-surface-variant mt-1">
+                            Checked in: <span className="font-mono">{formatTime(token.createdAt)}</span>
+                            {token.servedAt && (
+                              <>
+                                {' · '}Started: <span className="font-mono">{formatTime(token.servedAt)}</span>
+                              </>
+                            )}
+                          </p>
                         </div>
                       </div>
                       <span className={`${config.bg} ${config.color} text-xs px-3 py-1 rounded-full border ${config.borderColor} flex items-center gap-1.5 font-medium`} style={{ fontFamily: 'var(--font-jetbrains-mono)', letterSpacing: '0.05em' }}>
@@ -292,6 +320,8 @@ export function MyTicketsScreen() {
                       <th className="p-4 text-on-surface-variant text-xs font-medium" style={{ fontFamily: 'var(--font-jetbrains-mono)', letterSpacing: '0.05em' }}>Ticket</th>
                       <th className="p-4 text-on-surface-variant text-xs font-medium" style={{ fontFamily: 'var(--font-jetbrains-mono)', letterSpacing: '0.05em' }}>Service</th>
                       <th className="p-4 text-on-surface-variant text-xs font-medium" style={{ fontFamily: 'var(--font-jetbrains-mono)', letterSpacing: '0.05em' }}>Date</th>
+                      <th className="p-4 text-on-surface-variant text-xs font-medium hidden sm:table-cell" style={{ fontFamily: 'var(--font-jetbrains-mono)', letterSpacing: '0.05em' }}>Check-in / Check-out</th>
+                      <th className="p-4 text-on-surface-variant text-xs font-medium hidden md:table-cell" style={{ fontFamily: 'var(--font-jetbrains-mono)', letterSpacing: '0.05em' }}>Duration</th>
                       <th className="p-4 text-on-surface-variant text-xs font-medium" style={{ fontFamily: 'var(--font-jetbrains-mono)', letterSpacing: '0.05em' }}>Status</th>
                       <th className="p-4"></th>
                     </tr>
@@ -299,12 +329,25 @@ export function MyTicketsScreen() {
                   <tbody className="divide-y divide-white/5">
                     {pastTickets.slice(0, 10).map((token) => {
                       const config = statusConfig[token.status] || statusConfig.COMPLETED
+                      // For COMPLETED tokens we use completedAt; for CANCELLED/EXPIRED
+                      // we use updatedAt as the closest "exit" timestamp since
+                      // there's no explicit `leftAt` on the Token model.
+                      const checkOut = token.completedAt ?? token.updatedAt ?? null
+                      const dur = durationMinutes(token.createdAt, checkOut)
                       return (
                         <tr key={token.id} className="hover:bg-surface-container-highest/20 transition-colors">
                           <td className="p-4 text-primary font-medium" style={{ fontFamily: 'var(--font-jetbrains-mono)', letterSpacing: '0.05em' }}>{token.tokenNumber}</td>
                           <td className="p-4 text-on-surface">{token.queueName || 'Service'}</td>
                           <td className="p-4 text-on-surface-variant">
                             {new Date(token.createdAt).toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </td>
+                          <td className="p-4 hidden sm:table-cell text-on-surface-variant text-xs font-mono whitespace-nowrap">
+                            {formatTime(token.createdAt)}
+                            {' → '}
+                            {checkOut ? formatTime(checkOut) : <span className="text-on-surface-variant/60">still in queue</span>}
+                          </td>
+                          <td className="p-4 hidden md:table-cell text-on-surface-variant text-xs">
+                            {dur !== null ? `${dur} min` : '—'}
                           </td>
                           <td className="p-4">
                             <span className={`${config.bg} ${config.color} text-xs px-2 py-0.5 rounded border ${config.borderColor} font-medium`}>
