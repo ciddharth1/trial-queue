@@ -185,6 +185,21 @@ interface AppState {
   // Refresh trigger (increment to trigger re-fetches across all screens)
   refreshCounter: number
   triggerRefresh: () => void
+
+  // Centered token-called overlay banner. Driven by useTokenAlerts.
+  activeAlert: {
+    title: string
+    message: string
+    tokenNumber?: string
+    counterName?: string
+    at: number
+  } | null
+  setActiveAlert: (alert: {
+    title: string
+    message: string
+    tokenNumber?: string
+    counterName?: string
+  } | null) => void
 }
 
 export const useAppStore = create<AppState>()(
@@ -344,6 +359,13 @@ export const useAppStore = create<AppState>()(
       // Refresh trigger
       refreshCounter: 0,
       triggerRefresh: () => set((state) => ({ refreshCounter: state.refreshCounter + 1 })),
+
+      // Active alert banner
+      activeAlert: null,
+      setActiveAlert: (alert) =>
+        set({
+          activeAlert: alert ? { ...alert, at: Date.now() } : null,
+        }),
     }),
     {
       name: 'queueSevaAuth',

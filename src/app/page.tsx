@@ -28,6 +28,7 @@ import { AdminQueuesScreen } from '@/components/queue-seva/admin-queues'
 import { AdminScannerScreen } from '@/components/queue-seva/admin-scanner'
 import { QueuesListScreen } from '@/components/queue-seva/queues-list'
 import { ThemeInitializer } from '@/components/queue-seva/theme-initializer'
+import { TurnAlertOverlay } from '@/components/queue-seva/turn-alert-overlay'
 
 // View router mapping
 function ViewRouter({ view }: { view: AppView }) {
@@ -216,6 +217,7 @@ export default function Home() {
   return (
     <>
       <ThemeInitializer />
+      <TurnAlertOverlay />
       <AnimatePresence mode="wait">
         <motion.div
           key={currentView}
