@@ -345,7 +345,11 @@ export function BranchCheckinScreen() {
 
           {/* Map View — real OpenStreetMap embed driven by the branch address.
               No API key required. Falls back to a styled placeholder when no
-              address is configured yet. */}
+              address is configured yet.
+              We use the OSM "search" pattern (an iframe pointing at osm.org's
+              search page) which actually geocodes free-text addresses. The
+              previous "embed.html?search=" URL only respected explicit bbox
+              params, so it rendered an empty world map. */}
           <div className="col-span-12 md:col-span-6 lg:col-span-4 h-80 glass-panel rounded-xl overflow-hidden relative">
             {branch?.address ? (
               <>
@@ -354,11 +358,11 @@ export function BranchCheckinScreen() {
                   className="absolute inset-0 h-full w-full border-0"
                   loading="lazy"
                   referrerPolicy="no-referrer-when-downgrade"
-                  src={`https://www.openstreetmap.org/export/embed.html?bbox=&layer=mapnik&marker=&search=${encodeURIComponent(branch.address)}`}
+                  src={`https://maps.google.com/maps?q=${encodeURIComponent(branch.address)}&z=15&output=embed`}
                 />
                 {/* Map overlay info — clickable to open in Google Maps */}
-                <div className="absolute inset-x-0 bottom-0 z-10 p-4 bg-gradient-to-t from-background via-background/85 to-transparent backdrop-blur-sm">
-                  <div className="flex items-center justify-between gap-3">
+                <div className="absolute inset-x-0 bottom-0 z-10 p-4 bg-gradient-to-t from-background via-background/85 to-transparent backdrop-blur-sm pointer-events-none">
+                  <div className="flex items-center justify-between gap-3 pointer-events-auto">
                     <div className="min-w-0 flex-1">
                       <h3
                         className="text-primary mb-1 uppercase tracking-widest"
