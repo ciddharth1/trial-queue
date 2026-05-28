@@ -122,6 +122,21 @@ export function AdminQueuesScreen() {
   }
 
   const handleStatusChange = async (queueId: string, newStatus: string) => {
+    // Confirmation for destructive transitions. Active waiting tokens get
+    // cancelled when a queue is closed, so this needs an explicit "yes".
+    const queue = queuesList.find((q) => q.id === queueId)
+    const queueName = queue?.name || 'this queue'
+    if (newStatus === 'CLOSED') {
+      const ok = typeof window !== 'undefined'
+        ? window.confirm(`Close "${queueName}"? All waiting tokens in this queue will be cancelled.`)
+        : true
+      if (!ok) return
+    } else if (newStatus === 'PAUSED') {
+      const ok = typeof window !== 'undefined'
+        ? window.confirm(`Pause "${queueName}"? New users won't be able to join until you resume it.`)
+        : true
+      if (!ok) return
+    }
     try {
       const result = await apiClient.updateQueue(queueId, { status: newStatus })
       if (result.success) {
@@ -239,14 +254,14 @@ export function AdminQueuesScreen() {
 
       <main className="flex-1 overflow-y-auto p-4 sm:p-6">
         <div className="mx-auto max-w-4xl space-y-4">
-          {/* Live indicator */}
+          {/* Live indicator — driven by socket connection state */}
           <div className="flex items-center gap-2 text-[10px] text-slate-500">
             <motion.div
               className="h-1.5 w-1.5 rounded-full bg-emerald-400"
               animate={{ opacity: [1, 0.4, 1] }}
               transition={{ duration: 2, repeat: Infinity }}
             />
-            <span>Live · Auto-refreshing every 4s</span>
+            <span>Live · Updates instantly via realtime sync</span>
           </div>
 
           {/* Search & Create */}

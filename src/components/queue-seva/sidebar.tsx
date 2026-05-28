@@ -40,7 +40,7 @@ const adminNavItems: NavItem[] = [
   { icon: LayoutDashboard, label: 'Dashboard', view: 'admin-dashboard', roles: ['ADMIN', 'SUPER_ADMIN'] },
   { icon: ShieldCheck, label: 'Validate QR', view: 'admin-scanner', roles: ['ADMIN', 'SUPER_ADMIN'] },
   { icon: BarChart3, label: 'Analytics', view: 'admin-analytics', roles: ['ADMIN', 'SUPER_ADMIN'] },
-  { icon: ListOrdered, label: 'Queue Mgmt', view: 'admin-queues', roles: ['ADMIN', 'SUPER_ADMIN'] },
+  { icon: ListOrdered, label: 'Queue Management', view: 'admin-queues', roles: ['ADMIN', 'SUPER_ADMIN'] },
   { icon: ListOrdered, label: 'My Tickets', view: 'my-tickets' },
   { icon: Users, label: 'All Queues', view: 'queues' },
   { icon: MapPin, label: 'Check-in', view: 'qr-scanner' },
