@@ -36,7 +36,10 @@ ENV NEXT_PUBLIC_GOOGLE_CLIENT_ID=$NEXT_PUBLIC_GOOGLE_CLIENT_ID
 RUN npx prisma generate
 RUN npm run build
 
-# Stage 3: Production-only dependencies (slimmer than the build stage)
+# Stage 3: Production-only dependencies (slimmer than the build stage).
+# We need: prisma + @prisma/client + pg (start.sh probe) + socket.io + jsonwebtoken
+# (custom server.js wrapper). The Next.js standalone bundle ships its own deps
+# under .next/standalone/node_modules so we don't need next/react/etc here.
 FROM node:22-alpine AS prod-deps
 RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
@@ -61,13 +64,17 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
-# Prisma schema + the production node_modules (includes prisma CLI, @prisma/client, pg, etc.)
+# Prisma schema + production node_modules (includes prisma CLI, @prisma/client,
+# pg, socket.io, jsonwebtoken — all needed by start.sh and scripts/server.js).
 COPY --from=builder /app/prisma ./prisma
 COPY --from=prod-deps /app/node_modules ./node_modules
 
 # Re-generate Prisma client into the prod node_modules so the engine binary matches
 # the slim image. Cheap (no DB connection) and avoids subtle engine-version drift.
 RUN npx prisma generate
+
+# Custom server wrapper (Next.js standalone + embedded Socket.io)
+COPY scripts/server.js /app/scripts/server.js
 
 # Startup script
 COPY docker/start.sh /app/start.sh

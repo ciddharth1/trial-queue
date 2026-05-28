@@ -6,8 +6,11 @@
 // This ensures real-time updates are sent even if the client's socket
 // connection is not established yet.
 
-// Default to Docker internal hostname; override with SOCKET_SERVICE_URL for local dev
-const SOCKET_SERVICE_URL = process.env.SOCKET_SERVICE_URL || 'http://socket-service:3003'
+// Default to localhost since we now embed Socket.io into the Next.js process
+// itself — the /broadcast endpoint is on the same origin/port.
+const SOCKET_SERVICE_URL =
+  process.env.SOCKET_SERVICE_URL ||
+  `http://127.0.0.1:${process.env.PORT || '3000'}`
 // Optional shared secret for authenticating server-to-server broadcast calls.
 // When set on both the Next.js app and the socket service, the socket service
 // will reject unauthenticated /broadcast requests.
