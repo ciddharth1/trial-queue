@@ -76,7 +76,16 @@ export function Sidebar() {
       >
         {/* Header */}
         <div className="flex h-16 items-center justify-between border-b border-outline-variant/30 px-5">
-          <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              const role = user?.role
+              navigate(role === 'ADMIN' || role === 'SUPER_ADMIN' ? 'admin-dashboard' : 'dashboard')
+              setSidebarOpen(false)
+            }}
+            className="flex items-center gap-3 rounded-lg -mx-1 px-1 py-1 transition-colors hover:bg-surface-container-high/40"
+            aria-label="Go to dashboard"
+          >
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary-container to-tertiary-container shadow-lg shadow-primary-container/20">
               <svg width="18" height="18" viewBox="0 0 48 48" fill="none">
                 <path d="M16 8H32C36.4183 8 40 11.5817 40 16V32C40 36.4183 36.4183 40 32 40H16C11.5817 40 8 36.4183 8 32V16C8 11.5817 11.5817 8 16 8Z" stroke="white" strokeWidth="3" fill="none" />
@@ -85,13 +94,13 @@ export function Sidebar() {
                 <path d="M16 30H24" stroke="white" strokeWidth="3" strokeLinecap="round" />
               </svg>
             </div>
-            <div>
+            <div className="text-left">
               <h1 className="text-sm font-bold text-on-surface">
                 Queue<span className="text-secondary">Seva</span>
               </h1>
               <p className="text-[10px] text-on-surface-variant">Smart Queue Management</p>
             </div>
-          </div>
+          </button>
           <button
             onClick={() => setSidebarOpen(false)}
             className="rounded-lg p-1 text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface lg:hidden"

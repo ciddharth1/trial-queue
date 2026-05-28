@@ -21,6 +21,7 @@ import { useAppStore, type AppToken } from '@/lib/store'
 import { apiClient } from '@/lib/api-client'
 import { emitRefresh } from '@/hooks/use-realtime'
 import { socketManager } from '@/lib/socket'
+import { Header } from './header'
 import { toast } from 'sonner'
 
 function formatWaitTime(seconds: number | null): string {
@@ -141,26 +142,10 @@ export function MyTicketsScreen() {
   const pointsEarned = pastTickets.filter(t => t.status === 'COMPLETED').length * 50
 
   return (
-    <div className="min-h-screen bg-background text-on-background pb-24 md:pb-0">
-      {/* TopAppBar */}
-      <header className="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-4 h-16 backdrop-blur-xl bg-surface-container-low/90 border-b border-white/5 shadow-sm">
-        <div className="flex items-center gap-2">
-          <span className="text-primary text-xl">📍</span>
-          <h1 className="font-bold tracking-tight text-primary" style={{ fontFamily: 'var(--font-plus-jakarta)', fontSize: '24px', fontWeight: 700 }}>
-            QueueSeva
-          </h1>
-        </div>
-        <div className="flex items-center gap-4">
-          <button className="p-2 hover:bg-surface-container-highest/50 rounded-full transition-colors active:scale-95">
-            <Search className="h-5 w-5 text-on-surface-variant" />
-          </button>
-          <button className="p-2 hover:bg-surface-container-highest/50 rounded-full transition-colors active:scale-95">
-            <MoreVertical className="h-5 w-5 text-on-surface-variant" />
-          </button>
-        </div>
-      </header>
+    <div className="flex flex-1 flex-col bg-background pb-24 md:pb-0">
+      <Header title="My Tickets" subtitle="Your active and past service entries" showQr={false} />
 
-      <main className="pt-24 px-4 md:px-16 max-w-[1280px] mx-auto">
+      <main className="flex-1 overflow-y-auto px-4 sm:px-6 md:px-16 max-w-[1280px] mx-auto w-full pt-4">
         {/* Header Section */}
         <div className="mb-10 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
           <div>
