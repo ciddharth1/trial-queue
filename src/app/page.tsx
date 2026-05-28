@@ -6,6 +6,7 @@ import { useAppStore, type AppView } from '@/lib/store'
 import { apiClient } from '@/lib/api-client'
 import { useSocketConnection } from '@/hooks/use-realtime'
 import { useTokenAlerts } from '@/hooks/use-token-alerts'
+import { useInactivityLogout } from '@/hooks/use-inactivity-logout'
 
 // Import all screen components
 import { SplashScreen } from '@/components/queue-seva/splash-screen'
@@ -114,6 +115,10 @@ export default function Home() {
 
   // Wire persisted settings (token alerts, sound, vibration, push) to real side effects.
   useTokenAlerts()
+
+  // Auto-logout admins after 30 minutes of inactivity (60-second warning toast).
+  // No-op for regular users.
+  useInactivityLogout()
 
   // Hydrate the persisted store on first mount, then redirect based on auth state.
   // Runs exactly once. After this point, all navigation is store-driven.
