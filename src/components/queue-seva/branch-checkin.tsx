@@ -36,24 +36,45 @@ export function BranchCheckinScreen() {
   const [joining, setJoining] = useState(false)
   const [availableQueues, setAvailableQueues] = useState<AppQueue[]>([])
   const [scanResult, setScanResult] = useState<{ queueId: string; queueName: string } | null>(null)
+  // Real branch info pulled from the first available service center.
+  const [branch, setBranch] = useState<{
+    name: string
+    address: string | null
+    phone: string | null
+  } | null>(null)
 
   // Pre-generate QR pattern to avoid Math.random() in render
   const qrPattern = useMemo(() => Array.from({ length: 64 }, () => Math.random() > 0.4), [])
 
-  // Load available queues
+  // Load available queues + the first service center (used to render the
+  // map + address card with real data instead of placeholders).
   useEffect(() => {
-    const loadQueues = async () => {
+    const loadData = async () => {
       try {
-        const result = await apiClient.getQueues({ status: 'ACTIVE' })
-        if (result.success && result.data) {
-          const items = (result.data as any).items || []
+        const [queuesRes, centersRes] = await Promise.all([
+          apiClient.getQueues({ status: 'ACTIVE' }),
+          apiClient.getServiceCenters(),
+        ])
+        if (queuesRes.success && queuesRes.data) {
+          const items = (queuesRes.data as any).items || []
           setAvailableQueues(items)
         }
-      } catch (error) {
-        console.error('Failed to load queues:', error)
+        if (centersRes.success && centersRes.data) {
+          const centers = (centersRes.data as any).items || (centersRes.data as any) || []
+          if (Array.isArray(centers) && centers.length > 0) {
+            const first = centers[0]
+            setBranch({
+              name: first.name,
+              address: first.address ?? null,
+              phone: first.phone ?? null,
+            })
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load branch data:', err)
       }
     }
-    loadQueues()
+    loadData()
   }, [])
 
   // Simulate QR scan detection after 4 seconds
@@ -178,7 +199,7 @@ export function BranchCheckinScreen() {
         {/* Title Section */}
         <div className="mb-8">
           <h1 className="text-on-surface mb-2" style={{ fontFamily: 'var(--font-plus-jakarta), sans-serif', fontSize: 'clamp(24px, 4vw, 32px)', lineHeight: 1.2, fontWeight: 800, letterSpacing: '-0.02em' }}>
-            Check-in at Downtown Branch
+            Check-in at {branch?.name || 'your branch'}
           </h1>
           <p className="text-on-surface-variant max-w-2xl" style={{ fontSize: '16px', lineHeight: 1.5 }}>
             Scan the branch QR code or enter the 6-digit access code to join the queue instantly.
@@ -322,33 +343,55 @@ export function BranchCheckinScreen() {
             </button>
           </div>
 
-          {/* Map View */}
+          {/* Map View — real OpenStreetMap embed driven by the branch address.
+              No API key required. Falls back to a styled placeholder when no
+              address is configured yet. */}
           <div className="col-span-12 md:col-span-6 lg:col-span-4 h-80 glass-panel rounded-xl overflow-hidden relative">
-            <div className="absolute inset-0 z-0 grayscale opacity-40 brightness-50 bg-gradient-to-br from-surface-container-high to-surface-container-highest" />
-            {/* Map visual elements */}
-            <div className="absolute inset-0 flex items-center justify-center opacity-20">
-              <div className="relative w-full h-full">
-                <svg className="w-full h-full" viewBox="0 0 200 200" fill="none" opacity="0.4">
-                  <path d="M20 80 L60 40 L100 70 L140 30 L180 60" stroke="#4cd7f6" strokeWidth="1" />
-                  <path d="M10 120 L50 100 L90 130 L130 90 L170 110 L190 100" stroke="#c3c0ff" strokeWidth="0.5" />
-                  <path d="M30 160 L80 140 L120 170 L160 130" stroke="#464555" strokeWidth="0.5" />
-                </svg>
-              </div>
-            </div>
-            {/* Map overlay info */}
-            <div className="absolute inset-0 z-10 p-6 flex flex-col justify-end bg-gradient-to-t from-background via-background/40 to-transparent">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-primary mb-1 uppercase tracking-widest" style={{ fontFamily: 'var(--font-jetbrains-mono), monospace', fontSize: '14px', fontWeight: 500, letterSpacing: '0.05em' }}>
-                    Location
-                  </h3>
-                  <p className="text-on-surface" style={{ fontSize: '16px', lineHeight: 1.5 }}>123 Tech District, Innovation Ave.</p>
+            {branch?.address ? (
+              <>
+                <iframe
+                  title="Branch location"
+                  className="absolute inset-0 h-full w-full border-0"
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  src={`https://www.openstreetmap.org/export/embed.html?bbox=&layer=mapnik&marker=&search=${encodeURIComponent(branch.address)}`}
+                />
+                {/* Map overlay info — clickable to open in Google Maps */}
+                <div className="absolute inset-x-0 bottom-0 z-10 p-4 bg-gradient-to-t from-background via-background/85 to-transparent backdrop-blur-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <h3
+                        className="text-primary mb-1 uppercase tracking-widest"
+                        style={{ fontFamily: 'var(--font-jetbrains-mono), monospace', fontSize: '11px', fontWeight: 500, letterSpacing: '0.05em' }}
+                      >
+                        {branch.name}
+                      </h3>
+                      <p className="truncate text-on-surface text-sm" title={branch.address}>
+                        {branch.address}
+                      </p>
+                      {branch.phone && (
+                        <p className="truncate text-on-surface-variant text-xs">{branch.phone}</p>
+                      )}
+                    </div>
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(branch.address)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex shrink-0 items-center gap-1 rounded-full bg-primary px-3 py-2 text-xs font-bold text-on-primary shadow-md transition-transform active:scale-95"
+                    >
+                      <Crosshair className="h-3.5 w-3.5" />
+                      Open in Maps
+                    </a>
+                  </div>
                 </div>
-                <div className="w-12 h-12 rounded-full bg-primary/20 backdrop-blur-md flex items-center justify-center border border-primary/30 pulse-glow">
-                  <Crosshair className="h-5 w-5 text-primary" />
-                </div>
+              </>
+            ) : (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-surface-container-high to-surface-container-highest p-6 text-center">
+                <MapPin className="h-10 w-10 text-on-surface-variant" />
+                <p className="text-sm text-on-surface-variant">Branch location not set</p>
+                <p className="text-xs text-on-surface-variant">An admin can add an address from Service Center settings.</p>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Operating Hours */}

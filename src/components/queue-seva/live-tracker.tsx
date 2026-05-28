@@ -44,6 +44,7 @@ export function LiveTrackerScreen() {
   const { userTokens, selectedToken, navigate, refreshCounter, user, setUserTokens } = useAppStore()
   const [livePositions, setLivePositions] = useState<LivePosition[]>([])
   const [loading, setLoading] = useState(true)
+  const [bootstrapping, setBootstrapping] = useState(true)
   const [currentPosition, setCurrentPosition] = useState(0)
   const [totalInQueue, setTotalInQueue] = useState(0)
   const [notificationsEnabled, setNotificationsEnabled] = useState(true)
@@ -51,7 +52,47 @@ export function LiveTrackerScreen() {
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState({ title: '', subtitle: '' })
 
-  const activeToken: AppToken | null = selectedToken || userTokens.find((t) => ['WAITING', 'CALLED'].includes(t.status)) || null
+  // Source of truth: backend.
+  // We always prefer the freshest userTokens entry over the in-memory
+  // `selectedToken` (which can be stale after a refresh — `selectedToken` is
+  // not persisted across reloads). If userTokens has any active entry we use
+  // it; only as a last fallback do we look at selectedToken.
+  const liveActiveFromTokens = userTokens.find((t) =>
+    ['WAITING', 'CALLED', 'SERVING'].includes(t.status),
+  )
+  const activeToken: AppToken | null =
+    liveActiveFromTokens ||
+    (selectedToken && ['WAITING', 'CALLED', 'SERVING'].includes(selectedToken.status)
+      ? selectedToken
+      : null)
+
+  // ─── Bootstrap: on every mount, fetch the user's tokens from the server.
+  // This is what makes a refresh "remember" the active ticket — it's not
+  // stored client-side, but the backend always knows which tokens are still
+  // in the WAITING/CALLED/SERVING states for this user.
+  useEffect(() => {
+    let cancelled = false
+    async function bootstrap() {
+      if (!user) {
+        setBootstrapping(false)
+        return
+      }
+      try {
+        const result = await apiClient.getTokens({ userId: user.id, pageSize: 50 })
+        if (cancelled) return
+        if (result.success && result.data) {
+          const items = (result.data as { items?: AppToken[] }).items || (result.data as unknown as AppToken[]) || []
+          setUserTokens(Array.isArray(items) ? items : [])
+        }
+      } catch (err) {
+        console.error('[live-tracker] bootstrap failed:', err)
+      } finally {
+        if (!cancelled) setBootstrapping(false)
+      }
+    }
+    bootstrap()
+    return () => { cancelled = true }
+  }, [user, setUserTokens])
 
   const loadRealData = useCallback(async () => {
     if (!activeToken) {
@@ -177,6 +218,22 @@ export function LiveTrackerScreen() {
   const estimatedWaitSeconds = activeToken?.estimatedWait || currentPosition * 300
 
   if (!activeToken) {
+    // While bootstrap is in flight, show a loader instead of the empty state.
+    // Otherwise on every refresh you'd see "No active token" for ~300ms before
+    // the token list arrives and the screen swaps in.
+    if (bootstrapping) {
+      return (
+        <div className="flex flex-1 flex-col bg-background pb-24 md:pb-0">
+          <Header title="Live Tracker" subtitle="Loading your active ticket…" showQr={false} />
+          <main className="flex-1 overflow-y-auto px-4 sm:px-6 max-w-7xl mx-auto w-full">
+            <div className="flex flex-col items-center gap-3 py-16">
+              <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              <p className="text-sm text-on-surface-variant">Syncing with the server…</p>
+            </div>
+          </main>
+        </div>
+      )
+    }
     return (
       <div className="flex flex-1 flex-col bg-background pb-24 md:pb-0">
         <Header title="Live Tracker" subtitle="Track your queue position" showQr={false} />
