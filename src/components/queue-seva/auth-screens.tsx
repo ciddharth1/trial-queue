@@ -155,15 +155,6 @@ export function LoginScreen() {
             />
           </div>
 
-          {/* Demo credentials */}
-          <div className="rounded-xl border border-slate-800/50 bg-slate-900/30 p-4">
-            <p className="mb-2 text-xs font-medium text-slate-400">Quick Demo Access:</p>
-            <div className="space-y-1 text-[11px] text-slate-500">
-              <p>User: user@demo.com / password</p>
-              <p>Admin: admin@demo.com / password</p>
-            </div>
-          </div>
-
           {/* Sign up link */}
           <p className="text-center text-sm text-slate-500">
             Don&apos;t have an account?{' '}

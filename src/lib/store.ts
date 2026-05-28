@@ -193,10 +193,23 @@ export const useAppStore = create<AppState>()(
       currentView: 'splash',
       previousView: null,
       navigate: (view) =>
-        set((state) => ({
-          previousView: state.currentView,
-          currentView: view,
-        })),
+        set((state) => {
+          // Mirror navigation into the browser's history stack so the back
+          // button works naturally. We tag the state with a marker so the
+          // popstate handler in page.tsx can distinguish our entries.
+          if (typeof window !== 'undefined' && state.currentView !== view) {
+            try {
+              window.history.pushState({ view, app: 'queueseva' }, '')
+            } catch {
+              // Silently swallow — history operations can fail in sandboxed iframes
+              // and we never want to block in-app navigation because of that.
+            }
+          }
+          return {
+            previousView: state.currentView,
+            currentView: view,
+          }
+        }),
       goBack: () =>
         set((state) => ({
           currentView: state.previousView || 'dashboard',

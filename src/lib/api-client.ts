@@ -53,7 +53,7 @@ class ApiClient {
               if (refreshResult.success && refreshResult.data) {
                 this.setAccessToken(refreshResult.data.accessToken)
                 store.setAuth(store.user!, refreshResult.data.accessToken, store.refreshToken!)
-                // Retry the original request
+                // Retry the original request with the new access token
                 headers['Authorization'] = `Bearer ${refreshResult.data.accessToken}`
                 const retryResponse = await fetch(`${BASE_URL}${endpoint}`, { ...options, headers, _isRetry: true } as any)
                 if (retryResponse.ok) {
@@ -61,11 +61,16 @@ class ApiClient {
                 }
               }
             } catch {
-              // Refresh failed, logout
-              store.logout()
+              // Refresh failed below — fall through to silent logout
             }
+            // Refresh attempted but didn't succeed — clear auth so the next
+            // navigation lands on the welcome screen instead of looping.
+            store.logout()
           }
-          return { success: false, error: 'Session expired. Please login again.' }
+          // Avoid surfacing "Session expired" as a UI error during initial
+          // hydration. Caller code already handles success/failure based on
+          // result.success and we don't want a jarring banner on first load.
+          return { success: false, error: 'Not authenticated' }
         }
         return { success: false, error: data.error || data.message || `Request failed (${response.status})` }
       }

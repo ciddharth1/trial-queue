@@ -192,6 +192,10 @@ export function useAutoRefresh({
   refreshOnEvents = ['queue-update', 'token-update', 'admin-update', 'all'],
 }: UseAutoRefreshOptions) {
   const refreshRef = useRef(onRefresh)
+  // Honor the user's "Auto Refresh" setting. When disabled, we drop the timer.
+  // Live tracker / queue detail will still respond to socket events, just not
+  // wake up every 5 seconds to poll. The user gets a calmer UI; we get less load.
+  const autoRefreshSetting = useAppStore((s) => s.settings.autoRefresh)
   useEffect(() => {
     refreshRef.current = onRefresh
   }, [onRefresh])
@@ -199,13 +203,14 @@ export function useAutoRefresh({
   // Polling - reduced interval for more responsive updates
   useEffect(() => {
     if (!enabled || !refreshRef.current) return
+    if (!autoRefreshSetting) return // user disabled polling explicitly
 
     const id = setInterval(() => {
       refreshRef.current?.()
     }, interval)
 
     return () => clearInterval(id)
-  }, [interval, enabled])
+  }, [interval, enabled, autoRefreshSetting])
 
   // Event-based refresh (in-memory + BroadcastChannel + Socket.io)
   useEffect(() => {
