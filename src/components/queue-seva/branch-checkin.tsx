@@ -25,6 +25,7 @@ import {
 import { useAppStore, type AppQueue } from '@/lib/store'
 import { apiClient } from '@/lib/api-client'
 import { emitRefresh } from '@/hooks/use-realtime'
+import { Header } from './header'
 import { toast } from 'sonner'
 
 export function BranchCheckinScreen() {
@@ -170,29 +171,10 @@ export function BranchCheckinScreen() {
   const pinKeys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'backspace', '0', 'enter']
 
   return (
-    <div className="min-h-screen bg-background text-on-background overflow-x-hidden pb-24 md:pb-0">
-      {/* TopAppBar */}
-      <header className="fixed top-0 left-0 w-full z-50 flex justify-between items-center h-16 backdrop-blur-xl bg-surface-container-low/90 border-b border-white/5 shadow-sm px-4 md:px-16">
-        <div className="flex items-center gap-3">
-          <MapPin className="h-5 w-5 text-primary" />
-          <span className="font-bold tracking-tight text-primary" style={{ fontFamily: 'var(--font-plus-jakarta), sans-serif', fontSize: '24px', fontWeight: 700 }}>
-            QueueSeva
-          </span>
-        </div>
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => navigate('notifications')}
-            className="hover:bg-surface-container-highest/50 p-2 rounded-full transition-colors active:scale-95"
-          >
-            <Bell className="h-5 w-5 text-on-surface-variant" />
-          </button>
-          <button className="hover:bg-surface-container-highest/50 p-2 rounded-full transition-colors active:scale-95">
-            <MoreVertical className="h-5 w-5 text-on-surface-variant" />
-          </button>
-        </div>
-      </header>
+    <div className="flex flex-1 flex-col bg-background overflow-x-hidden pb-24 md:pb-0">
+      <Header title="Check-in" subtitle="Scan a branch QR or enter the access code" showQr={false} />
 
-      <main className="pt-24 pb-12 px-4 md:px-16 max-w-7xl mx-auto">
+      <main className="flex-1 overflow-y-auto px-4 md:px-16 max-w-7xl mx-auto w-full pt-4 pb-12">
         {/* Title Section */}
         <div className="mb-8">
           <h1 className="text-on-surface mb-2" style={{ fontFamily: 'var(--font-plus-jakarta), sans-serif', fontSize: 'clamp(24px, 4vw, 32px)', lineHeight: 1.2, fontWeight: 800, letterSpacing: '-0.02em' }}>

@@ -47,9 +47,9 @@ function ViewRouter({ view }: { view: AppView }) {
     case 'queue-detail':
       return <LayoutWithSidebar><QueueDetailScreen /></LayoutWithSidebar>
     case 'qr-scanner':
-      return <QRScannerScreen />
+      return <LayoutWithSidebar><QRScannerScreen /></LayoutWithSidebar>
     case 'branch-checkin':
-      return <BranchCheckinScreen />
+      return <LayoutWithSidebar><BranchCheckinScreen /></LayoutWithSidebar>
     case 'token-display':
       return <LayoutWithSidebar><TokenDisplayScreen /></LayoutWithSidebar>
     case 'live-tracker':
