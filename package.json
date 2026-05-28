@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "next build && node scripts/post-build.mjs",
-    "start": "cross-env NODE_ENV=production node .next/standalone/server.js",
+    "start": "cross-env NODE_ENV=production node scripts/server.js",
     "start:standalone": "node .next/standalone/server.js",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
