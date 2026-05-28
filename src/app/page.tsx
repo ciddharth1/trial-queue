@@ -53,7 +53,7 @@ function ViewRouter({ view }: { view: AppView }) {
     case 'token-display':
       return <LayoutWithSidebar><TokenDisplayScreen /></LayoutWithSidebar>
     case 'live-tracker':
-      return <LiveTrackerScreen />
+      return <LayoutWithSidebar><LiveTrackerScreen /></LayoutWithSidebar>
     case 'my-tickets':
       return <MyTicketsScreen />
     case 'notifications':
