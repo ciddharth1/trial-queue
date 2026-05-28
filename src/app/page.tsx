@@ -29,6 +29,7 @@ import { AdminScannerScreen } from '@/components/queue-seva/admin-scanner'
 import { QueuesListScreen } from '@/components/queue-seva/queues-list'
 import { ThemeInitializer } from '@/components/queue-seva/theme-initializer'
 import { TurnAlertOverlay } from '@/components/queue-seva/turn-alert-overlay'
+import { AppErrorBoundary } from '@/components/queue-seva/error-boundary'
 
 // View router mapping
 function ViewRouter({ view }: { view: AppView }) {
@@ -227,7 +228,12 @@ export default function Home() {
           transition={{ duration: 0.2 }}
           className="min-h-dvh"
         >
-          <ViewRouter view={currentView} />
+          {/* Error boundary keyed by currentView: a crash on screen A doesn't
+              poison subsequent screens, and switching views naturally resets
+              the boundary so the user never gets stuck on a broken screen. */}
+          <AppErrorBoundary key={currentView}>
+            <ViewRouter view={currentView} />
+          </AppErrorBoundary>
         </motion.div>
       </AnimatePresence>
     </>
