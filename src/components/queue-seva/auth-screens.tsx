@@ -32,7 +32,8 @@ export function LoginScreen() {
       if (result.success && result.data) {
         apiClient.setAccessToken(result.data.accessToken)
         setAuth(result.data.user, result.data.accessToken, result.data.refreshToken)
-        navigate(result.data.user.role === 'ADMIN' ? 'admin-dashboard' : 'dashboard')
+        const role = result.data.user.role
+        navigate(role === 'ADMIN' || role === 'SUPER_ADMIN' ? 'admin-dashboard' : 'dashboard')
       } else {
         setError(result.error || 'Login failed. Please check your credentials.')
       }

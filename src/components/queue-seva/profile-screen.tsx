@@ -57,7 +57,7 @@ export function ProfileScreen() {
                 <Badge
                   variant="outline"
                   className={
-                    user?.role === 'ADMIN'
+                    user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN'
                       ? 'bg-[#4F46E5]/10 text-[#4F46E5] border-[#4F46E5]/20'
                       : 'bg-slate-800/50 text-slate-400 border-slate-700'
                   }

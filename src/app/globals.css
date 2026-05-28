@@ -3,90 +3,215 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ─── Theme tokens as CSS variables ─────────────────────────────
+   The full Material Design 3 palette lives on :root (light) and .dark
+   (dark). Tailwind reads these via @theme inline below. Toggling the
+   .dark class on <html> swaps every token at once.
+*/
+
+:root {
+  /* Light mode — derived from the MD3 reference for a violet-cyan brand. */
+  --background: #f4f6fb;
+  --foreground: #0f172a;
+
+  --color-primary: #4f46e5;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #e2dfff;
+  --color-on-primary-container: #1d00a5;
+  --color-primary-fixed: #e2dfff;
+  --color-primary-fixed-dim: #c3c0ff;
+  --color-on-primary-fixed: #0f0069;
+  --color-on-primary-fixed-variant: #3323cc;
+
+  --color-secondary: #0891b2;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #c8eef8;
+  --color-on-secondary-container: #00424e;
+  --color-secondary-fixed: #acedff;
+  --color-secondary-fixed-dim: #4cd7f6;
+  --color-on-secondary-fixed: #001f26;
+  --color-on-secondary-fixed-variant: #004e5c;
+
+  --color-tertiary: #862dd4;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #ebd2ff;
+  --color-on-tertiary-container: #2c0051;
+  --color-tertiary-fixed: #f0dbff;
+  --color-tertiary-fixed-dim: #ddb7ff;
+  --color-on-tertiary-fixed: #2c0051;
+  --color-on-tertiary-fixed-variant: #6900b3;
+
+  --color-error: #b3261e;
+  --color-on-error: #ffffff;
+  --color-error-container: #f9dedc;
+  --color-on-error-container: #410e0b;
+
+  --color-surface: #f4f6fb;
+  --color-surface-dim: #d8dbe2;
+  --color-surface-bright: #ffffff;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #eef0f6;
+  --color-surface-container: #e7eaf1;
+  --color-surface-container-high: #dde0e8;
+  --color-surface-container-highest: #d2d6df;
+  --color-surface-variant: #e1e3eb;
+  --color-surface-tint: #4f46e5;
+
+  --color-on-surface: #0f172a;
+  --color-on-surface-variant: #475063;
+  --color-on-background: #0f172a;
+
+  --color-outline: #6b7280;
+  --color-outline-variant: #c2c7d0;
+
+  --color-inverse-surface: #1f2438;
+  --color-inverse-on-surface: #e7eaf1;
+  --color-inverse-primary: #c3c0ff;
+}
+
+.dark {
+  /* Dark mode — original violet/cyan palette. */
+  --background: #0b1326;
+  --foreground: #dae2fd;
+
+  --color-primary: #c3c0ff;
+  --color-on-primary: #1d00a5;
+  --color-primary-container: #4f46e5;
+  --color-on-primary-container: #dad7ff;
+  --color-primary-fixed: #e2dfff;
+  --color-primary-fixed-dim: #c3c0ff;
+  --color-on-primary-fixed: #0f0069;
+  --color-on-primary-fixed-variant: #3323cc;
+
+  --color-secondary: #4cd7f6;
+  --color-on-secondary: #003640;
+  --color-secondary-container: #03b5d3;
+  --color-on-secondary-container: #00424e;
+  --color-secondary-fixed: #acedff;
+  --color-secondary-fixed-dim: #4cd7f6;
+  --color-on-secondary-fixed: #001f26;
+  --color-on-secondary-fixed-variant: #004e5c;
+
+  --color-tertiary: #ddb7ff;
+  --color-on-tertiary: #490080;
+  --color-tertiary-container: #862dd4;
+  --color-on-tertiary-container: #ebd2ff;
+  --color-tertiary-fixed: #f0dbff;
+  --color-tertiary-fixed-dim: #ddb7ff;
+  --color-on-tertiary-fixed: #2c0051;
+  --color-on-tertiary-fixed-variant: #6900b3;
+
+  --color-error: #ffb4ab;
+  --color-on-error: #690005;
+  --color-error-container: #93000a;
+  --color-on-error-container: #ffdad6;
+
+  --color-surface: #0b1326;
+  --color-surface-dim: #0b1326;
+  --color-surface-bright: #31394d;
+  --color-surface-container-lowest: #060e20;
+  --color-surface-container-low: #131b2e;
+  --color-surface-container: #171f33;
+  --color-surface-container-high: #222a3d;
+  --color-surface-container-highest: #2d3449;
+  --color-surface-variant: #2d3449;
+  --color-surface-tint: #c3c0ff;
+
+  --color-on-surface: #dae2fd;
+  --color-on-surface-variant: #c7c4d8;
+  --color-on-background: #dae2fd;
+
+  --color-outline: #918fa1;
+  --color-outline-variant: #464555;
+
+  --color-inverse-surface: #dae2fd;
+  --color-inverse-on-surface: #283044;
+  --color-inverse-primary: #4d44e3;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-inter);
   --font-mono: var(--font-jetbrains-mono);
 
-  /* Material Design 3 Color Tokens */
-  --color-on-error-container: #ffdad6;
-  --color-surface-container-highest: #2d3449;
-  --color-inverse-on-surface: #283044;
-  --color-primary-fixed: #e2dfff;
-  --color-surface-tint: #c3c0ff;
-  --color-tertiary: #ddb7ff;
-  --color-inverse-surface: #dae2fd;
-  --color-error-container: #93000a;
-  --color-primary: #c3c0ff;
-  --color-primary-fixed-dim: #c3c0ff;
-  --color-on-primary-container: #dad7ff;
-  --color-on-background: #dae2fd;
-  --color-on-tertiary-fixed: #2c0051;
-  --color-on-secondary-fixed: #001f26;
-  --color-on-error: #690005;
-  --color-outline-variant: #464555;
-  --color-surface-bright: #31394d;
-  --color-on-surface-variant: #c7c4d8;
-  --color-on-surface: #dae2fd;
-  --color-secondary-fixed: #acedff;
-  --color-tertiary-container: #862dd4;
-  --color-error: #ffb4ab;
-  --color-surface-container-lowest: #060e20;
-  --color-secondary-container: #03b5d3;
-  --color-on-primary-fixed-variant: #3323cc;
-  --color-secondary-fixed-dim: #4cd7f6;
-  --color-on-tertiary-fixed-variant: #6900b3;
-  --color-surface-container-low: #131b2e;
-  --color-on-secondary: #003640;
-  --color-outline: #918fa1;
-  --color-on-tertiary: #490080;
-  --color-surface-container: #171f33;
-  --color-surface-variant: #2d3449;
-  --color-primary-container: #4f46e5;
-  --color-tertiary-fixed: #f0dbff;
-  --color-on-primary-fixed: #0f0069;
-  --color-on-secondary-fixed-variant: #004e5c;
-  --color-secondary: #4cd7f6;
-  --color-surface-dim: #0b1326;
-  --color-on-secondary-container: #00424e;
-  --color-on-primary: #1d00a5;
-  --color-tertiary-fixed-dim: #ddb7ff;
-  --color-inverse-primary: #4d44e3;
-  --color-surface: #0b1326;
-  --color-on-tertiary-container: #ebd2ff;
-  --color-surface-container-high: #222a3d;
-  --color-on-primary-fixed: #0f0069;
+  /* Material Design 3 — these resolve to the values defined above based on
+     whether <html> has the .dark class or not. */
+  --color-on-error-container: var(--color-on-error-container);
+  --color-surface-container-highest: var(--color-surface-container-highest);
+  --color-inverse-on-surface: var(--color-inverse-on-surface);
+  --color-primary-fixed: var(--color-primary-fixed);
+  --color-surface-tint: var(--color-surface-tint);
+  --color-tertiary: var(--color-tertiary);
+  --color-inverse-surface: var(--color-inverse-surface);
+  --color-error-container: var(--color-error-container);
+  --color-primary: var(--color-primary);
+  --color-primary-fixed-dim: var(--color-primary-fixed-dim);
+  --color-on-primary-container: var(--color-on-primary-container);
+  --color-on-background: var(--color-on-background);
+  --color-on-tertiary-fixed: var(--color-on-tertiary-fixed);
+  --color-on-secondary-fixed: var(--color-on-secondary-fixed);
+  --color-on-error: var(--color-on-error);
+  --color-outline-variant: var(--color-outline-variant);
+  --color-surface-bright: var(--color-surface-bright);
+  --color-on-surface-variant: var(--color-on-surface-variant);
+  --color-on-surface: var(--color-on-surface);
+  --color-secondary-fixed: var(--color-secondary-fixed);
+  --color-tertiary-container: var(--color-tertiary-container);
+  --color-error: var(--color-error);
+  --color-surface-container-lowest: var(--color-surface-container-lowest);
+  --color-secondary-container: var(--color-secondary-container);
+  --color-on-primary-fixed-variant: var(--color-on-primary-fixed-variant);
+  --color-secondary-fixed-dim: var(--color-secondary-fixed-dim);
+  --color-on-tertiary-fixed-variant: var(--color-on-tertiary-fixed-variant);
+  --color-surface-container-low: var(--color-surface-container-low);
+  --color-on-secondary: var(--color-on-secondary);
+  --color-outline: var(--color-outline);
+  --color-on-tertiary: var(--color-on-tertiary);
+  --color-surface-container: var(--color-surface-container);
+  --color-surface-variant: var(--color-surface-variant);
+  --color-primary-container: var(--color-primary-container);
+  --color-tertiary-fixed: var(--color-tertiary-fixed);
+  --color-on-primary-fixed: var(--color-on-primary-fixed);
+  --color-on-secondary-fixed-variant: var(--color-on-secondary-fixed-variant);
+  --color-secondary: var(--color-secondary);
+  --color-surface-dim: var(--color-surface-dim);
+  --color-on-secondary-container: var(--color-on-secondary-container);
+  --color-on-primary: var(--color-on-primary);
+  --color-tertiary-fixed-dim: var(--color-tertiary-fixed-dim);
+  --color-inverse-primary: var(--color-inverse-primary);
+  --color-surface: var(--color-surface);
+  --color-on-tertiary-container: var(--color-on-tertiary-container);
+  --color-surface-container-high: var(--color-surface-container-high);
 
   /* shadcn/ui compatible tokens */
-  --color-card: var(--surface-container);
-  --color-card-foreground: var(--on-surface);
-  --color-popover: var(--surface-container);
-  --color-popover-foreground: var(--on-surface);
-  --color-ring: var(--primary);
-  --color-input: var(--outline-variant);
-  --color-border: var(--outline-variant);
-  --color-destructive: var(--error);
-  --color-accent-foreground: var(--on-primary-fixed);
-  --color-accent: var(--primary-fixed);
-  --color-muted-foreground: var(--on-surface-variant);
-  --color-muted: var(--surface-container-high);
-  --color-secondary-foreground: var(--on-secondary);
-  --color-secondary: var(--secondary-fixed-dim);
-  --color-primary-foreground: var(--on-primary);
+  --color-card: var(--color-surface-container);
+  --color-card-foreground: var(--color-on-surface);
+  --color-popover: var(--color-surface-container);
+  --color-popover-foreground: var(--color-on-surface);
+  --color-ring: var(--color-primary);
+  --color-input: var(--color-outline-variant);
+  --color-border: var(--color-outline-variant);
+  --color-destructive: var(--color-error);
+  --color-accent-foreground: var(--color-on-primary-fixed);
+  --color-accent: var(--color-primary-fixed);
+  --color-muted-foreground: var(--color-on-surface-variant);
+  --color-muted: var(--color-surface-container-high);
+  --color-secondary-foreground: var(--color-on-secondary);
+  --color-primary-foreground: var(--color-on-primary);
   --color-chart-1: #c3c0ff;
   --color-chart-2: #4cd7f6;
   --color-chart-3: #ddb7ff;
   --color-chart-4: #ffb4ab;
   --color-chart-5: #03b5d3;
-  --color-sidebar: var(--surface-container-low);
-  --color-sidebar-foreground: var(--on-surface);
-  --color-sidebar-primary: var(--primary);
-  --color-sidebar-primary-foreground: var(--on-primary);
-  --color-sidebar-accent: var(--surface-container-high);
-  --color-sidebar-accent-foreground: var(--on-surface);
-  --color-sidebar-border: var(--outline-variant);
-  --color-sidebar-ring: var(--primary);
+  --color-sidebar: var(--color-surface-container-low);
+  --color-sidebar-foreground: var(--color-on-surface);
+  --color-sidebar-primary: var(--color-primary);
+  --color-sidebar-primary-foreground: var(--color-on-primary);
+  --color-sidebar-accent: var(--color-surface-container-high);
+  --color-sidebar-accent-foreground: var(--color-on-surface);
+  --color-sidebar-border: var(--color-outline-variant);
+  --color-sidebar-ring: var(--color-primary);
 
   --radius-sm: 0.25rem;
   --radius-md: 0.5rem;
@@ -103,16 +228,6 @@
   --font-body-md: var(--font-inter);
 }
 
-:root {
-  --background: #0b1326;
-  --foreground: #dae2fd;
-}
-
-.dark {
-  --background: #0b1326;
-  --foreground: #dae2fd;
-}
-
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -126,23 +241,28 @@
 
 .glass-panel {
   backdrop-filter: blur(12px);
-  background: rgba(30, 41, 59, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: color-mix(in oklab, var(--color-surface-container-low) 70%, transparent);
+  border: 1px solid color-mix(in oklab, var(--color-on-surface) 8%, transparent);
 }
 
 .glass {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  background: rgba(30, 41, 59, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: color-mix(in oklab, var(--color-surface-container-low) 70%, transparent);
+  border: 1px solid color-mix(in oklab, var(--color-on-surface) 8%, transparent);
 }
 
 .token-glow {
-  box-shadow: 0 0 20px -5px rgba(195, 192, 255, 0.4);
+  box-shadow: 0 0 20px -5px color-mix(in oklab, var(--color-primary) 40%, transparent);
 }
 
 .shimmer {
-  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.05) 50%, rgba(255,255,255,0) 100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in oklab, var(--color-on-surface) 5%, transparent) 50%,
+    transparent 100%
+  );
   background-size: 200% 100%;
   animation: shimmer 2s infinite linear;
 }
@@ -163,8 +283,8 @@
 
 .qr-scanner-line {
   height: 2px;
-  background: linear-gradient(90deg, transparent, #4cd7f6, transparent);
-  box-shadow: 0 0 15px #4cd7f6;
+  background: linear-gradient(90deg, transparent, var(--color-secondary-fixed-dim), transparent);
+  box-shadow: 0 0 15px var(--color-secondary-fixed-dim);
   animation: scan 2.5s ease-in-out infinite;
 }
 
@@ -184,12 +304,28 @@
 }
 
 @keyframes pulse-primary {
-  0% { box-shadow: 0 0 0 0 rgba(195, 192, 255, 0.4); }
-  70% { box-shadow: 0 0 0 20px rgba(195, 192, 255, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(195, 192, 255, 0); }
+  0% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-primary) 40%, transparent); }
+  70% { box-shadow: 0 0 0 20px color-mix(in oklab, var(--color-primary) 0%, transparent); }
+  100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-primary) 0%, transparent); }
 }
 
 /* Material Symbols Outlined config */
 .material-symbols-outlined {
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+/* Compact view setting (toggled by ThemeInitializer reading store.settings.compactView) */
+:where(html.compact) {
+  --layout-density: 0.85;
+}
+:where(html.compact) main {
+  padding-top: 0.75rem !important;
+  padding-bottom: 0.75rem !important;
+}
+
+/* When live-tracking is disabled, dampen ambient animations to be calmer */
+:where(html.live-tracking-disabled) .pulse-glow,
+:where(html.live-tracking-disabled) .pulse-secondary,
+:where(html.live-tracking-disabled) .shimmer {
+  animation: none !important;
 }

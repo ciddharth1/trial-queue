@@ -37,9 +37,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
+    // The initial className=`dark` on <html> matches the persisted default (theme = 'dark')
+    // to prevent a flash of light theme during hydration. ThemeInitializer (a client
+    // component mounted from page.tsx) will then sync the class from Zustand whenever
+    // the user toggles the theme.
     <html lang="en" className="dark" suppressHydrationWarning>
       <body
-        className={`${plusJakarta.variable} ${inter.variable} ${jetbrainsMono.variable} antialiased bg-background text-on-background font-body-md dark`}
+        className={`${plusJakarta.variable} ${inter.variable} ${jetbrainsMono.variable} antialiased bg-background text-on-background font-body-md`}
       >
         <AppGoogleAuthProvider>
           {children}

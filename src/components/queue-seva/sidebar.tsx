@@ -155,7 +155,7 @@ export function Sidebar() {
               <p className="truncate text-sm font-medium text-on-surface">{user?.name || 'User'}</p>
               <p className="truncate text-[11px] text-on-surface-variant">{user?.email || ''}</p>
             </div>
-            {user?.role === 'ADMIN' && (
+            {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
               <Shield className="h-4 w-4 text-secondary" />
             )}
           </div>
