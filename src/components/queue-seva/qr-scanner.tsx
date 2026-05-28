@@ -160,28 +160,61 @@ export function QRScannerScreen() {
       return
     }
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' },
-        audio: false,
-      })
-      streamRef.current = stream
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        await videoRef.current.play().catch(() => { /* autoplay can fail silently */ })
+      let stream: MediaStream
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' } },
+          audio: false,
+        })
+      } catch (firstErr) {
+        const name = (firstErr as { name?: string })?.name
+        if (name === 'OverconstrainedError' || name === 'ConstraintNotSatisfiedError') {
+          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+        } else {
+          throw firstErr
+        }
       }
+      streamRef.current = stream
+      // Render the <video> first; the post-mount effect below attaches the
+      // stream and kicks off the decode loop. Setting srcObject on a ref that
+      // hasn't mounted yet is the bug that produced the "blue border, black
+      // inside" symptom.
       setCameraActive(true)
-      rafRef.current = requestAnimationFrame(decodeFrameLoop)
     } catch (err) {
       const name = (err as { name?: string })?.name
       if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
         setError('Camera access was denied. Allow camera access in your browser, or upload a QR image instead.')
       } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
         setError('No camera was found on this device. Upload a QR image to continue.')
+      } else if (name === 'NotReadableError' || name === 'TrackStartError') {
+        setError('Camera is in use by another app. Close other tabs/apps and try again.')
       } else {
         setError('Could not start the camera. Try uploading a QR image instead.')
       }
     }
-  }, [decodeFrameLoop])
+  }, [])
+
+  // Attach the stream once the <video> element actually mounts. Same pattern
+  // as the admin-scanner — avoids the race where srcObject is set on a null ref.
+  useEffect(() => {
+    if (!cameraActive) return
+    const video = videoRef.current
+    const stream = streamRef.current
+    if (!video || !stream) return
+
+    video.srcObject = stream
+    const playPromise = video.play()
+    if (playPromise && typeof playPromise.catch === 'function') {
+      playPromise.catch(() => { /* autoplay can fail silently */ })
+    }
+    rafRef.current = requestAnimationFrame(decodeFrameLoop)
+    return () => {
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current)
+        rafRef.current = null
+      }
+    }
+  }, [cameraActive, decodeFrameLoop])
 
   // Stop the camera if the user navigates away
   useEffect(() => {
@@ -354,6 +387,7 @@ export function QRScannerScreen() {
                 <video
                   ref={videoRef}
                   className="absolute inset-0 h-full w-full object-cover"
+                  autoPlay
                   muted
                   playsInline
                 />

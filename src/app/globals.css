@@ -329,3 +329,56 @@
 :where(html.live-tracking-disabled) .shimmer {
   animation: none !important;
 }
+
+/* ─── Light-mode overrides for hardcoded slate / white classes ─────────
+   Many screens (auth, profile cards, scanner shells) were authored with
+   slate-900 / white tokens hardwired. Refactoring each one to use design
+   tokens is a large mechanical task; this layer maps the most common dark
+   classes to light equivalents when html.light is set. Components built
+   later that use design tokens (bg-background, text-on-surface) work
+   automatically through @theme inline. */
+:where(html:not(.dark)) .bg-slate-900,
+:where(html:not(.dark)) .bg-slate-900\/80,
+:where(html:not(.dark)) .bg-slate-900\/50,
+:where(html:not(.dark)) .bg-slate-900\/40,
+:where(html:not(.dark)) .bg-slate-900\/30,
+:where(html:not(.dark)) .bg-slate-900\/20 {
+  background-color: var(--color-surface-container) !important;
+}
+:where(html:not(.dark)) .bg-slate-800,
+:where(html:not(.dark)) .bg-slate-800\/50,
+:where(html:not(.dark)) .bg-slate-800\/30 {
+  background-color: var(--color-surface-container-high) !important;
+}
+:where(html:not(.dark)) .border-slate-800,
+:where(html:not(.dark)) .border-slate-800\/50,
+:where(html:not(.dark)) .border-slate-800\/30,
+:where(html:not(.dark)) .border-slate-700 {
+  border-color: var(--color-outline-variant) !important;
+}
+:where(html:not(.dark)) .text-white,
+:where(html:not(.dark)) .text-slate-100,
+:where(html:not(.dark)) .text-slate-200,
+:where(html:not(.dark)) .text-slate-300 {
+  color: var(--color-on-surface) !important;
+}
+:where(html:not(.dark)) .text-slate-400,
+:where(html:not(.dark)) .text-slate-500 {
+  color: var(--color-on-surface-variant) !important;
+}
+:where(html:not(.dark)) .text-slate-600,
+:where(html:not(.dark)) .text-slate-700 {
+  color: color-mix(in oklab, var(--color-on-surface-variant) 80%, transparent) !important;
+}
+
+/* The Token Display card uses a hardcoded gradient (`from-[#111827] to-[#0F172A]`).
+   In light mode we want it to feel like a polished ticket, not a dark band. */
+:where(html:not(.dark)) .from-\[\#111827\].to-\[\#0F172A\] {
+  background-image: linear-gradient(to bottom, var(--color-surface-bright), var(--color-surface-container)) !important;
+}
+
+/* Inputs in dark form screens use `bg-slate-900/80` — reuse the override
+   above. We additionally lighten focus/placeholder colors. */
+:where(html:not(.dark)) .placeholder\:text-slate-600::placeholder {
+  color: var(--color-on-surface-variant) !important;
+}

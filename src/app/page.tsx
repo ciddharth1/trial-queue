@@ -75,12 +75,15 @@ function ViewRouter({ view }: { view: AppView }) {
   }
 }
 
-// Layout wrapper with sidebar for authenticated views
+// Layout wrapper with sidebar for authenticated views.
+// Uses 100dvh so the layout resizes correctly when mobile browsers show/hide
+// their URL bar. The inner column uses min-h-0 so flex children can scroll
+// without their content being clipped.
 function LayoutWithSidebar({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex min-h-dvh bg-background">
       <Sidebar />
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex min-h-0 flex-1 flex-col">
         {children}
       </div>
     </div>
@@ -220,7 +223,7 @@ export default function Home() {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="h-screen overflow-hidden"
+          className="min-h-dvh"
         >
           <ViewRouter view={currentView} />
         </motion.div>

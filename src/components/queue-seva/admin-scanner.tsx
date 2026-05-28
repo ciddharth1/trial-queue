@@ -187,28 +187,68 @@ export function AdminScannerScreen() {
       return
     }
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' },
-        audio: false,
-      })
-      streamRef.current = stream
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        await videoRef.current.play().catch(() => { /* autoplay can fail silently */ })
+      // Try environment-facing camera first (mobile rear), fall back to any.
+      let stream: MediaStream
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' } },
+          audio: false,
+        })
+      } catch (firstErr) {
+        // Some desktops reject `facingMode` constraints entirely. Retry without.
+        const name = (firstErr as { name?: string })?.name
+        if (name === 'OverconstrainedError' || name === 'ConstraintNotSatisfiedError') {
+          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+        } else {
+          throw firstErr
+        }
       }
+      streamRef.current = stream
+      // Switch UI mode FIRST so the <video> element gets mounted, then attach
+      // the stream from the post-mount effect below. Setting srcObject on a
+      // ref that hasn't been committed to the DOM is the bug that produced
+      // the "blue border with black inside" symptom.
       setCameraActive(true)
-      rafRef.current = requestAnimationFrame(decodeFrameLoop)
     } catch (err) {
       const name = (err as { name?: string })?.name
       if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
         setError('Camera access was denied. Allow camera in your browser, or upload an image.')
       } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
         setError('No camera found on this device. Use the upload option.')
+      } else if (name === 'NotReadableError' || name === 'TrackStartError') {
+        setError('Camera is in use by another app. Close other tabs/apps and try again.')
       } else {
         setError('Could not start the camera. Use the upload option.')
       }
     }
-  }, [decodeFrameLoop])
+  }, [])
+
+  // Attach the stream to the <video> the moment it mounts. Also kick off the
+  // decode loop. Cleans up if cameraActive flips back to false.
+  useEffect(() => {
+    if (!cameraActive) return
+    const video = videoRef.current
+    const stream = streamRef.current
+    if (!video || !stream) return
+
+    video.srcObject = stream
+    // Some browsers (Safari, in-app webviews) require play() to be called
+    // explicitly even with autoplay/muted. We swallow rejections because
+    // they're informational on this code path — the video will still render
+    // once it can.
+    const playPromise = video.play()
+    if (playPromise && typeof playPromise.catch === 'function') {
+      playPromise.catch(() => { /* autoplay rejection is fine */ })
+    }
+
+    rafRef.current = requestAnimationFrame(decodeFrameLoop)
+    return () => {
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current)
+        rafRef.current = null
+      }
+    }
+  }, [cameraActive, decodeFrameLoop])
 
   useEffect(() => {
     return () => stopCamera()
@@ -364,6 +404,7 @@ export function AdminScannerScreen() {
                 <video
                   ref={videoRef}
                   className="absolute inset-0 h-full w-full object-cover"
+                  autoPlay
                   muted
                   playsInline
                 />
