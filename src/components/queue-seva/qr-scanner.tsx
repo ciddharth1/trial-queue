@@ -233,8 +233,19 @@ export function QRScannerScreen() {
         })
       } catch (firstErr) {
         const name = (firstErr as { name?: string })?.name
-        if (name === 'OverconstrainedError' || name === 'ConstraintNotSatisfiedError') {
-          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+        if (
+          name === 'OverconstrainedError' ||
+          name === 'ConstraintNotSatisfiedError' ||
+          name === 'NotFoundError'
+        ) {
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: { facingMode: 'user' },
+              audio: false,
+            })
+          } catch {
+            stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+          }
         } else {
           throw firstErr
         }

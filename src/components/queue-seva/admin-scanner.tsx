@@ -187,7 +187,9 @@ export function AdminScannerScreen() {
       return
     }
     try {
-      // Try environment-facing camera first (mobile rear), fall back to any.
+      // Try environment-facing camera first (mobile rear), then fall back
+      // explicitly to user-facing (laptops without a rear camera), then to
+      // unconstrained video as a last resort.
       let stream: MediaStream
       try {
         stream = await navigator.mediaDevices.getUserMedia({
@@ -195,10 +197,20 @@ export function AdminScannerScreen() {
           audio: false,
         })
       } catch (firstErr) {
-        // Some desktops reject `facingMode` constraints entirely. Retry without.
         const name = (firstErr as { name?: string })?.name
-        if (name === 'OverconstrainedError' || name === 'ConstraintNotSatisfiedError') {
-          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+        if (
+          name === 'OverconstrainedError' ||
+          name === 'ConstraintNotSatisfiedError' ||
+          name === 'NotFoundError'
+        ) {
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: { facingMode: 'user' },
+              audio: false,
+            })
+          } catch {
+            stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+          }
         } else {
           throw firstErr
         }

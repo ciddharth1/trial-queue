@@ -223,13 +223,47 @@ export const useAppStore = create<AppState>()(
       refreshToken: null,
       isAuthenticated: false,
       setAuth: (user, accessToken, refreshToken) =>
-        set({
-          user,
-          accessToken,
-          refreshToken,
-          isAuthenticated: true,
+        set((state) => {
+          // ─── PREVENT GHOST DATA ON LOGIN ─────────────────────────
+          // If a different user is signing in, wipe all user-scoped caches
+          // so we never paint another user's tokens/notifications/selections
+          // for even a single render. We also wipe on first sign-in (state.user
+          // is null) for the same reason — there shouldn't be queue/token data
+          // sitting in the store before login anyway.
+          const sameUser = state.user?.id && state.user.id === user.id
+          if (sameUser) {
+            return {
+              user,
+              accessToken,
+              refreshToken,
+              isAuthenticated: true,
+            }
+          }
+          return {
+            user,
+            accessToken,
+            refreshToken,
+            isAuthenticated: true,
+            // Reset everything user-scoped — the dashboard / token list will
+            // re-fetch fresh data for this user from useEffect on mount.
+            queues: [],
+            userTokens: [],
+            notifications: [],
+            unreadCount: 0,
+            selectedQueue: null,
+            selectedQueueId: null,
+            selectedToken: null,
+            error: null,
+          }
         }),
-      logout: () =>
+      logout: () => {
+        // Also clear cross-tab session bits so a logout in this tab doesn't
+        // leave stale data lying around for the next user who signs in here.
+        if (typeof window !== 'undefined') {
+          try {
+            sessionStorage.removeItem('queue-seva-tab-id')
+          } catch { /* swallow */ }
+        }
         set({
           user: null,
           accessToken: null,
@@ -240,9 +274,13 @@ export const useAppStore = create<AppState>()(
           queues: [],
           userTokens: [],
           notifications: [],
+          unreadCount: 0,
           selectedQueue: null,
+          selectedQueueId: null,
           selectedToken: null,
-        }),
+          error: null,
+        })
+      },
 
       // Selected items
       selectedQueueId: null,
