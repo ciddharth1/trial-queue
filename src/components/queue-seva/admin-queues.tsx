@@ -51,8 +51,8 @@ export function AdminQueuesScreen() {
     }
   }, [])
 
-  const loadQueues = useCallback(async () => {
-    setLoading(true)
+  const loadQueues = useCallback(async (opts?: { background?: boolean }) => {
+    if (!opts?.background) setLoading(true)
     try {
       const result = await apiClient.getQueues()
       if (result.success && result.data) {
@@ -73,9 +73,9 @@ export function AdminQueuesScreen() {
     loadQueues()
   }, [])
 
-  // Refresh when refreshCounter changes (driven by socket events)
+  // Background refresh on socket events.
   useEffect(() => {
-    if (refreshCounter > 0) loadQueues()
+    if (refreshCounter > 0) loadQueues({ background: true })
   }, [refreshCounter])
 
   const filteredQueues = queuesList.filter(

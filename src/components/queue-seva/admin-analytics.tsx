@@ -36,18 +36,18 @@ export function AdminAnalyticsScreen() {
     loadAnalytics()
   }, [])
 
-  // Refresh when refreshCounter changes
+  // Refresh when refreshCounter changes — silent.
   useEffect(() => {
     if (refreshCounter > 0) {
-      loadAnalytics()
+      loadAnalytics({ background: true })
     }
   }, [refreshCounter])
 
   // Auto-poll every 8 seconds — removed.
   // Updates now arrive via socket events → refreshCounter → loadAnalytics().
 
-  const loadAnalytics = async () => {
-    setLoading(true)
+  const loadAnalytics = async (opts?: { background?: boolean }) => {
+    if (!opts?.background) setLoading(true)
     try {
       const result = await apiClient.getAdminAnalytics({ days: 7 })
       if (result.success && result.data) {

@@ -37,19 +37,19 @@ export function NotificationsScreen() {
     loadNotifications()
   }, [user?.id])
 
-  // Refresh when refreshCounter changes
+  // Refresh when refreshCounter changes — silent background fetch.
   useEffect(() => {
     if (refreshCounter > 0) {
-      loadNotifications()
+      loadNotifications({ background: true })
     }
   }, [refreshCounter])
 
   // Auto-poll every 5 seconds — removed.
   // Updates now arrive via socket events → refreshCounter → loadNotifications().
 
-  const loadNotifications = async () => {
+  const loadNotifications = async (opts?: { background?: boolean }) => {
     if (!user) return
-    setLoading(true)
+    if (!opts?.background) setLoading(true)
     try {
       const result = await apiClient.getNotifications()
       if (result.success && result.data) {

@@ -140,14 +140,14 @@ export function AdminDashboard() {
     }
   }, [])
 
-  // Initial load
+  // Initial load (skeleton shown once)
   useEffect(() => {
     setLoading(true)
     loadStats()
     loadChartData()
   }, [])
 
-  // Auto-refresh when refreshCounter changes
+  // Auto-refresh on socket events — silent.
   useEffect(() => {
     if (refreshCounter > 0) {
       loadStats()

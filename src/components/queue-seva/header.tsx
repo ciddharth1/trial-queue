@@ -15,24 +15,24 @@ export function Header({ title, subtitle, showNotifications = true, showQr = tru
   const { toggleSidebar, navigate, unreadCount, socketConnected } = useAppStore()
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-outline-variant/30 bg-surface/80 px-4 backdrop-blur-xl sm:px-6">
-      <div className="flex items-center gap-3">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-2 border-b border-outline-variant/30 bg-surface/80 px-4 backdrop-blur-xl sm:px-6">
+      <div className="flex min-w-0 flex-1 items-center gap-3">
         <button
           onClick={toggleSidebar}
           className="rounded-lg p-2 text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-on-surface lg:hidden"
         >
           <Menu className="h-5 w-5" />
         </button>
-        <div>
-          <h1 className="text-lg font-semibold text-on-surface">{title}</h1>
-          {subtitle && <p className="text-xs text-on-surface-variant">{subtitle}</p>}
+        <div className="min-w-0">
+          <h1 className="truncate text-lg font-semibold text-on-surface">{title}</h1>
+          {subtitle && <p className="truncate text-xs text-on-surface-variant">{subtitle}</p>}
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
-        {/* Socket status */}
+      <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+        {/* Socket status — hide pill text on very narrow screens to free space */}
         <motion.div
-          className="flex items-center gap-1.5 rounded-full border border-outline-variant/50 bg-surface-container/50 px-2.5 py-1"
+          className="flex items-center gap-1.5 rounded-full border border-outline-variant/50 bg-surface-container/50 px-2 py-1 sm:px-2.5"
           animate={{ opacity: socketConnected ? 1 : 0.5 }}
         >
           {socketConnected ? (
@@ -40,7 +40,7 @@ export function Header({ title, subtitle, showNotifications = true, showQr = tru
           ) : (
             <WifiOff className="h-3 w-3 text-on-surface-variant" />
           )}
-          <span className="text-[10px] text-on-surface-variant">
+          <span className="hidden text-[10px] text-on-surface-variant sm:inline">
             {socketConnected ? 'Live' : 'Offline'}
           </span>
         </motion.div>

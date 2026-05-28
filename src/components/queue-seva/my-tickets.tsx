@@ -66,8 +66,9 @@ export function MyTicketsScreen() {
   const [leavingId, setLeavingId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
 
-  const loadTickets = useCallback(async () => {
+  const loadTickets = useCallback(async (opts?: { background?: boolean }) => {
     if (!user) { setLoading(false); return }
+    if (!opts?.background) setLoading(true)
     try {
       const result = await apiClient.getTokens({ userId: user.id, pageSize: 50 })
       if (result.success && result.data) {
@@ -85,9 +86,9 @@ export function MyTicketsScreen() {
     loadTickets()
   }, [])
 
-  // Refresh when socket events arrive
+  // Background refresh on socket events.
   useEffect(() => {
-    if (refreshCounter > 0) loadTickets()
+    if (refreshCounter > 0) loadTickets({ background: true })
   }, [refreshCounter])
 
   const activeTickets = userTokens.filter((t) => ['WAITING', 'CALLED', 'SERVING'].includes(t.status))

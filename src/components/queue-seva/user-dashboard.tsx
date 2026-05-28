@@ -192,8 +192,8 @@ export function UserDashboard() {
   const { user, navigate, setSelectedQueue, setQueues, queues, userTokens, setUserTokens, refreshCounter } = useAppStore()
   const [loading, setLoading] = useState(true)
 
-  const loadData = useCallback(async () => {
-    setLoading(true)
+  const loadData = useCallback(async (opts?: { background?: boolean }) => {
+    if (!opts?.background) setLoading(true)
     try {
       const [queuesRes, tokensRes] = await Promise.all([
         apiClient.getQueues({ status: 'ACTIVE' }),
@@ -219,11 +219,9 @@ export function UserDashboard() {
     loadData()
   }, [])
 
-  // Refresh when refreshCounter changes (triggered by admin actions or other screens)
+  // Background refresh on socket events — no skeleton flicker.
   useEffect(() => {
-    if (refreshCounter > 0) {
-      loadData()
-    }
+    if (refreshCounter > 0) loadData({ background: true })
   }, [refreshCounter])
 
   // Auto-poll every 5 seconds for real-time updates — removed.

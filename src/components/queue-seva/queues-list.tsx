@@ -15,8 +15,8 @@ export function QueuesListScreen() {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [loading, setLoading] = useState(true)
 
-  const loadQueues = useCallback(async () => {
-    setLoading(true)
+  const loadQueues = useCallback(async (opts?: { background?: boolean }) => {
+    if (!opts?.background) setLoading(true)
     try {
       const result = await apiClient.getQueues(
         statusFilter !== 'all' ? { status: statusFilter } : undefined
@@ -35,9 +35,9 @@ export function QueuesListScreen() {
     loadQueues()
   }, [statusFilter])
 
-  // Refresh when refreshCounter changes (driven by socket events)
+  // Refresh when refreshCounter changes (driven by socket events) — silent.
   useEffect(() => {
-    if (refreshCounter > 0) loadQueues()
+    if (refreshCounter > 0) loadQueues({ background: true })
   }, [refreshCounter])
 
   const filteredQueues = queues.filter(

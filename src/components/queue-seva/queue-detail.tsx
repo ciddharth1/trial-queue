@@ -37,9 +37,9 @@ export function QueueDetailScreen() {
   const [loading, setLoading] = useState(false)
   const [joining, setJoining] = useState(false)
 
-  const loadQueueDetail = useCallback(async () => {
+  const loadQueueDetail = useCallback(async (opts?: { background?: boolean }) => {
     if (!selectedQueue?.id) return
-    setLoading(true)
+    if (!opts?.background) setLoading(true)
     try {
       const [queueRes, tokensRes] = await Promise.all([
         apiClient.getQueue(selectedQueue.id),
@@ -63,10 +63,10 @@ export function QueueDetailScreen() {
     }
   }, [selectedQueue?.id, loadQueueDetail])
 
-  // Refresh when refreshCounter changes (other users/admins made changes)
+  // Background refresh on socket events.
   useEffect(() => {
     if (refreshCounter > 0 && selectedQueue?.id) {
-      loadQueueDetail()
+      loadQueueDetail({ background: true })
     }
   }, [refreshCounter])
 
