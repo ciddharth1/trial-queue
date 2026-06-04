@@ -43,15 +43,18 @@ export async function GET(
     }
 
     // Calculate current position if still waiting
+    // Source of truth: QueueMember.position
     let currentPosition: number | null = null
     if (token.status === 'WAITING') {
-      currentPosition = await db.token.count({
+      const member = await db.queueMember.findFirst({
         where: {
           queueId: token.queueId,
+          userId: token.userId,
           status: 'WAITING',
-          sequenceNum: { lte: token.sequenceNum },
         },
+        select: { position: true },
       })
+      currentPosition = member?.position || null
     }
 
     // Re-derive a signed QR payload for the owner only. This lets the user's

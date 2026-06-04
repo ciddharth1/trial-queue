@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     if (queueId) where.queueId = queueId
     if (effectiveUserId) where.userId = effectiveUserId
 
-    const [tokens, total] = await Promise.all([
+    const [tokensRaw, total] = await Promise.all([
       db.token.findMany({
         where,
         include: {
@@ -47,6 +47,32 @@ export async function GET(request: NextRequest) {
       }),
       db.token.count({ where }),
     ])
+
+    // Enrich each token with its current position from QueueMember
+    // This is the SINGLE SOURCE OF TRUTH for position
+    const tokens = await Promise.all(
+      tokensRaw.map(async (token) => {
+        let currentPosition: number | null = null
+        
+        if (token.status === 'WAITING') {
+          // Get position from QueueMember table (authoritative source)
+          const member = await db.queueMember.findFirst({
+            where: {
+              queueId: token.queueId,
+              userId: token.userId,
+              status: 'WAITING',
+            },
+            select: { position: true },
+          })
+          currentPosition = member?.position || null
+        }
+        
+        return {
+          ...token,
+          position: currentPosition,
+        }
+      })
+    )
 
     return paginatedResponse(tokens, total, page, pageSize)
   } catch (error) {

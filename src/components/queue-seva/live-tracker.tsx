@@ -112,6 +112,13 @@ export function LiveTrackerScreen() {
         for (const token of allTokens) {
           if (token.status === 'COMPLETED' || token.status === 'CANCELLED' || token.status === 'EXPIRED') continue
 
+          // CRITICAL FIX: Skip tokens without backend position (race condition safety)
+          // Backend is SINGLE SOURCE OF TRUTH - never calculate client-side
+          if (token.status === 'WAITING' && !token.position) {
+            console.warn(`[live-tracker] Token ${token.id} missing position, skipping until backend recalculates`)
+            continue
+          }
+
           const isMe = token.id === activeToken.id
           const status: LivePosition['status'] =
             isMe ? 'you' :
@@ -119,14 +126,13 @@ export function LiveTrackerScreen() {
             token.status === 'CALLED' ? 'serving' :
             'waiting'
 
+          // CRITICAL: Trust backend position - never recalculate client-side
           if (isMe) {
-            myPosition = allTokens.filter(
-              (t: any) => t.status === 'WAITING' && t.sequenceNum <= token.sequenceNum
-            ).length
+            myPosition = token.position || 0
           }
 
           positions.push({
-            position: positions.length + 1,
+            position: token.position || 0, // Backend provides position, fallback to 0 (never calculate)
             tokenNumber: token.tokenNumber,
             status,
             estimatedWait: token.estimatedWait || 0,
@@ -135,9 +141,17 @@ export function LiveTrackerScreen() {
           })
         }
 
+        // Sort by position (backend provides correct order)
+        positions.sort((a, b) => a.position - b.position)
+
         setLivePositions(positions)
-        setCurrentPosition(myPosition || activeToken.position || activeToken.sequenceNum || 0)
+        setCurrentPosition(myPosition)
         setTotalInQueue(positions.filter(p => p.status !== 'completed').length)
+
+        // Debug logging for position tracking
+        if (myPosition > 0) {
+          console.log(`[live-tracker] Position update: ${myPosition}, people ahead: ${myPosition - 1}, total in queue: ${positions.length}`)
+        }
       }
     } catch (error) {
       console.error('Failed to load live data:', error)
